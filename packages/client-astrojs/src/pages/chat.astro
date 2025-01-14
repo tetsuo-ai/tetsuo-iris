@@ -30,18 +30,16 @@ const availableAgents: { role: AgentRole, title: string, description: string }[]
 ---
 
 <Layout title="Companion | Chat">
-  <div class="bg-zinc-950">
-    <div class="p-4 h-screen flex gap-4 overflow-hidden">
-      <Sidebar />
-      <div class="grow grid place-items-center">
-        <div class="grid grid-cols-2 gap-4">
-          {availableAgents.map((agent) => (
-            <a href={`/chat/${agent.role.toLowerCase()}`} class="chat-agent-option">
-              <h2 class="title">{agent.title}</h2>
-              <p class="description">{agent.description}</p>
-            </a>
-          ))}
-        </div>
+  <div class="p-4 h-screen flex gap-4 overflow-hidden">
+    <Sidebar />
+    <div class="grow grid place-items-center">
+      <div class="grid grid-cols-2 gap-4">
+        {availableAgents.map((agent) => (
+          <a href={`/chat/${agent.role.toLowerCase()}`} class="chat-agent-option">
+            <h2 class="title">{agent.title}</h2>
+            <p class="description">{agent.description}</p>
+          </a>
+        ))}
       </div>
     </div>
   </div>
