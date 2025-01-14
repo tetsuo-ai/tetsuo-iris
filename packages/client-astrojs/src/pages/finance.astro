@@ -1,7 +1,13 @@
 ---
 import TradingViewWidget from "../components/TradingViewWidget";
+import WhaleTransactionsWidget from "../components/WhaleTransactionsWidget";
 ---
 
-<div class="w-screen h-screen">
-  <TradingViewWidget client:load />
+<div class="bg-zinc-950">
+  <div class="p-4 grid gap-4">
+    <div class="h-[44rem]">
+      <TradingViewWidget client:load />
+    </div>
+    <WhaleTransactionsWidget client:visible />
+  </div>
 </div>
