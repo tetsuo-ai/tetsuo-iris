@@ -1,0 +1,43 @@
+---
+const currentPath = Astro.url.pathname;
+---
+
+<nav class="max-w-24 h-full bg-zinc-900 p-2 flex flex-col gap-4">
+  <img src="logo.webp" alt="Tetsuo AI Logo" class="w-14 h-14"/>
+  <a
+    href="/finance"
+    class=`
+      ${currentPath === "/finance" ? "bg-zinc-500" : "bg-zinc-700 hover:bg-zinc-600"}
+      w-14 h-14 text-zinc-200 text-sm grid place-items-center hover:cursor-pointer
+    `
+  >
+    Finance
+  </a>
+  <a
+    href="/chat"
+    class=`
+      ${currentPath === "/chat" ? "bg-zinc-500" : "bg-zinc-700 hover:bg-zinc-600"}
+      w-14 h-14 text-zinc-200 text-sm grid place-items-center hover:cursor-pointer
+    `
+  >
+    Chat
+  </a>
+  <a
+    href="/tools"
+    class=`
+      ${currentPath === "/tools" ? "bg-zinc-500" : "bg-zinc-700 hover:bg-zinc-600"}
+      w-14 h-14 text-zinc-200 text-sm grid place-items-center hover:cursor-pointer
+    `
+  >
+    Tools
+  </a>
+  <a
+    href="/media"
+    class=`
+      ${currentPath === "/media" ? "bg-zinc-500" : "bg-zinc-700 hover:bg-zinc-600"}
+      w-14 h-14 text-zinc-200 text-sm grid place-items-center hover:cursor-pointer
+    `
+  >
+    Media
+  </a>
+</nav>
