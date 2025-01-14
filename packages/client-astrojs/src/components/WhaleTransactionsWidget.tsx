@@ -180,12 +180,9 @@ const transactions = [
 
 export default function WhaleTransactionsWidget() {
   return (
-    <table className="w-full table-auto border-collapse font-mono font-semibold text-zinc-200">
-      <caption className="caption-top mb-4 text-2xl">
-        Whale Transactions
-      </caption>
-      <thead className="sticky">
-        <tr className="text-left border border-zinc-800">
+    <table className="w-full table-auto font-mono font-semibold text-zinc-200">
+      <thead className="sticky top-0 bg-zinc-900">
+        <tr className="text-left">
           <th className="p-2">Date</th>
           <th className="p-2">Price</th>
           <th className="p-2">Volume</th>
@@ -195,17 +192,17 @@ export default function WhaleTransactionsWidget() {
       </thead>
       <tbody>
       {transactions.map((txn) => (
-        <tr>
-          <td className="p-2 border border-zinc-800">{new Date(txn.timestamp).toLocaleString(navigator.languages)}</td>
-          <td className="p-2 border border-zinc-800">${txn.price_usd.toFixed(5)}</td>
-          <td className="p-2 border border-zinc-800">${txn.amount_usd.toFixed(2)}</td>
-          <td className="p-2 border border-zinc-800">
+        <tr className="outline outline-1 outline-zinc-900">
+          <td className="p-2">{new Date(txn.timestamp).toLocaleString(navigator.languages)}</td>
+          <td className="p-2">${txn.price_usd.toFixed(5)}</td>
+          <td className="p-2">${txn.amount_usd.toFixed(2)}</td>
+          <td className="p-2">
             {Intl.NumberFormat(navigator.languages, {
               notation: 'compact',
               compactDisplay: 'short',
             }).format(txn.amount_tokens)}
           </td>
-          <td className="p-2 border border-zinc-800">
+          <td className="p-2">
             <a
               href={`https://solscan.io/tx/${txn.transaction_hash}`}
               target="_blank"
