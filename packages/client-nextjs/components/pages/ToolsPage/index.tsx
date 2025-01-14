@@ -11,9 +11,9 @@ const toolsPages = [
     href: "/tools/sentiment",
   },
   {
-    name: "Tool B",
-    description: "Description for Tool B.",
-    href: "/tools/tool-b",
+    name: "Link Summary",
+    description: "Summarizes text in the URL provided.",
+    href: "/tools/linksummary",
   },
   {
     name: "Tool C",
