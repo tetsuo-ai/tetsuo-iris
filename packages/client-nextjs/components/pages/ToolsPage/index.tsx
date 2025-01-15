@@ -11,9 +11,9 @@ const toolsPages = [
     href: "/tools/sentiment",
   },
   {
-    name: "Link Summary",
-    description: "Summarizes text in the URL provided.",
-    href: "/tools/linksummary",
+    name: "Summary Tools",
+    description: "Summarizes text from URL and input.",
+    href: "/tools/summary",
   },
   {
     name: "Text to Speech",
