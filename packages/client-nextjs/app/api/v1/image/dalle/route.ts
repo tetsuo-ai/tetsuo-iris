@@ -21,8 +21,8 @@ export const POST = async (request: Request) => {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 
-        // Construct the endpoint for DALL-E API
-        const endpoint = `${API_URL}api/v1/image/dalle`;
+        // Ensure the API_URL has a trailing slash
+        const endpoint = `${API_URL.replace(/\/?$/, "/")}api/v1/image/dalle`;
 
         console.log("API endpoint:", endpoint);
 

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AlertErrorMessage } from "@/components/shared/AlertErrorMessage";
+import Breadcrumbs from "@/components/Breadcrumbs";
 
 const SpeechPage = () => {
     // Form inputs
@@ -62,6 +63,7 @@ const SpeechPage = () => {
 
     return (
         <div className="max-w-xl mx-auto space-y-6 p-6">
+            <Breadcrumbs /> {/* Breadcrumb Navigation */}
             <h1 className="text-2xl font-bold">Text To Speech</h1>
 
             <div className="space-y-3">

@@ -4,6 +4,9 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertErrorMessage } from "@/components/shared/AlertErrorMessage";
+import Breadcrumbs from "@/components/Breadcrumbs";
+
+
 
 const SentimentPage = () => {
     const [text, setText] = useState("");
@@ -42,6 +45,8 @@ const SentimentPage = () => {
 
     return (
         <div className="space-y-8 p-8 max-w-lg mx-auto">
+            <Breadcrumbs /> {/* Breadcrumb Navigation */}
+
             <h1 className="text-2xl font-bold">Text Sentiment Analysis</h1>
 
             {/* Input Fields */}

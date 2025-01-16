@@ -10,19 +10,29 @@ import { NextRequest, NextResponse } from "next/server";
 export async function GET(request: NextRequest) {
     try {
         if (!API_URL || !BEARER_TOKEN) {
+            console.error("API_URL or BEARER_TOKEN missing.");
             return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
         }
 
         const { searchParams } = new URL(request.url);
         const textParam = searchParams.get("text");
-        if (!textParam) {
-            return NextResponse.json({ error: "Missing 'text' query param" }, { status: 400 });
+
+        // Validate input text
+        if (!textParam || textParam.length > 500) {
+            console.error("Invalid 'text' query parameter:", textParam);
+            return NextResponse.json(
+                { error: "Invalid 'text' query parameter. Maximum length is 500 characters." },
+                { status: 400 }
+            );
         }
+
+        console.log("Forwarding GET request to external API:", {
+            url: `${API_URL}/api/v1/summarize/text?text=${textParam}`,
+        });
 
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 5000);
 
-        // External GET /api/v1/summarize/text?text=...
         const externalRes = await fetch(
             `${API_URL}/api/v1/summarize/text?text=${encodeURIComponent(textParam)}`,
             {
@@ -36,20 +46,25 @@ export async function GET(request: NextRequest) {
 
         clearTimeout(timeout);
 
+        console.log("External API Response Status:", externalRes.status);
+        const responseText = await externalRes.text();
+        console.log("External API Response Body:", responseText);
+
         if (!externalRes.ok) {
-            const errTxt = await externalRes.text();
             return NextResponse.json(
-                { error: `External Summarize-Text GET error: ${errTxt}` },
+                { error: `External Summarize-Text GET error: ${responseText}` },
                 { status: externalRes.status }
             );
         }
 
-        const data = await externalRes.json();
+        const data = JSON.parse(responseText);
         return NextResponse.json(data, { status: 200 });
     } catch (error) {
         if (error instanceof Error && error.name === "AbortError") {
+            console.error("Request timed out.");
             return NextResponse.json({ error: "Request timed out" }, { status: 504 });
         }
+        console.error("Unexpected server error:", error);
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

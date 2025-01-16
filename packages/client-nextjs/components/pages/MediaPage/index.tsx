@@ -3,6 +3,7 @@
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import Link from "next/link";
 import { type FC } from "react";
+import Breadcrumbs from "@/components/Breadcrumbs";
 
 const mediaPages = [
   {
@@ -16,9 +17,9 @@ const mediaPages = [
     href: "/media/dalle",
   },
   {
-    name: "Other Media",
+    name: "Image API",
     description: "Fetch Logos, Memes, and List Images.",
-    href: "/media/other",
+    href: "/media/image",
   },
 ];
 
@@ -36,6 +37,7 @@ const MediaCard: FC<{ page: typeof mediaPages[number] }> = ({ page }) => (
 const MediaPage = () => {
   return (
     <div className="container mx-auto py-8">
+      <Breadcrumbs /> {/* Breadcrumb Navigation */}
       <h1 className="text-2xl font-bold mb-4">Media Utilities</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {mediaPages.map((page) => (
