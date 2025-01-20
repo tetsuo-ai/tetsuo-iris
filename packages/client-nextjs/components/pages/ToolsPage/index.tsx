@@ -16,9 +16,9 @@ const toolsPages = [
     href: "/tools/linksummary",
   },
   {
-    name: "Tool C",
-    description: "Description for Tool C.",
-    href: "/tools/tool-c",
+    name: "Text to Speech",
+    description: "Narrates voice over for given text.",
+    href: "/tools/speech",
   },
 ];
 
