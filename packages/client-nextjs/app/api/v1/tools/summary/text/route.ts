@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
 
         const { searchParams } = new URL(request.url);
         const textParam = searchParams.get("text");
+
         if (!textParam) {
             return NextResponse.json({ error: "Missing 'text' query param" }, { status: 400 });
         }

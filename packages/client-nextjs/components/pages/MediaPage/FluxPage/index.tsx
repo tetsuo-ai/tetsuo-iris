@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertErrorMessage } from "@/components/shared/AlertErrorMessage";
+import Breadcrumbs from "@/components/Breadcrumbs";
 
 const FluxPage = () => {
     const [prompt, setPrompt] = useState("");
@@ -64,6 +65,7 @@ const FluxPage = () => {
 
     return (
         <div className="space-y-8 p-8 max-w-lg mx-auto">
+            <Breadcrumbs /> {/* Breadcrumb Navigation */}
             <h1 className="text-2xl font-bold">Generate Flux Image</h1>
 
             {/* Input Fields */}
