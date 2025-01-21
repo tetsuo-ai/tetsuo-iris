@@ -4,9 +4,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AlertErrorMessage } from "@/components/shared/AlertErrorMessage";
-import Breadcrumbs from "@/components/Breadcrumbs";
-
-
 
 /**
  * A simple page to test the TTS route: POST /api/v1/tools/speech/tts
@@ -64,8 +61,6 @@ export default function SpeechPage() {
 
     return (
         <div className="max-w-xl mx-auto p-6 space-y-6">
-            <Breadcrumbs /> {/* Breadcrumb Navigation */}
-
             <h1 className="text-2xl font-bold">Speech Page</h1>
 
             <div className="space-y-3">

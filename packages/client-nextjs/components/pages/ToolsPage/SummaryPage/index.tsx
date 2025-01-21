@@ -4,13 +4,11 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AlertErrorMessage } from "@/components/shared/AlertErrorMessage";
-import Breadcrumbs from "@/components/Breadcrumbs";
 
 /** Converts a string to sentence case. */
 function toSentenceCase(str: string) {
     return str.replace(/(^\s*\w|[\.\?\!]\s*\w)/g, (c) => c.toUpperCase());
 }
-
 
 /** 
  * Parses markdown to formatted HTML with sentence casing applied.
@@ -96,49 +94,28 @@ export default function SummaryPage() {
 
     // Summarize Text (GET)
     async function handleSummarizeTextGET() {
-        console.log("Preparing to fetch GET summary...");
-        console.log("Input Text:", textGet);
-
         setGetError(null);
         setGetResult(null);
         setIsLoadingGet(true);
-
         try {
-            const queryText = textGet.trim();
-
-            // Validate input
-            if (!queryText || queryText.length > 500) {
-                throw new Error(
-                    "Input text is either empty or exceeds the maximum allowed length (500 characters)."
-                );
-            }
-
             const res = await fetch(
-                `/api/v1/tools/summary/text?text=${encodeURIComponent(queryText)}`
+                `/api/v1/tools/summary/text?text=${encodeURIComponent(textGet)}`
             );
-
-            console.log("GET Response Status:", res.status);
-
             if (!res.ok) {
                 const errMsg = await res.text();
-                console.error("GET Error Response:", errMsg);
                 setGetError(errMsg);
                 return;
             }
-
             const data = await res.json();
-            console.log("GET Response Data:", data); // Log the full response
             setGetResult(toSentenceCase(data.summary || ""));
         } catch (err) {
-            console.error("GET Summary Fetch Error:", err);
             setGetError(
-                err instanceof Error ? err.message : "An unexpected error occurred."
+                err instanceof Error ? err.message : "Failed to GET summarize text."
             );
         } finally {
             setIsLoadingGet(false);
         }
     }
-
 
     // Summarize Text (POST)
     async function handleSummarizeTextPOST() {
@@ -185,130 +162,133 @@ export default function SummaryPage() {
     }
 
     return (
-        <div className="max-w-6xl mx-auto p-6">
-            <Breadcrumbs /> {/* Breadcrumb Navigation */}
-            <h1 className="text-2xl font-bold mb-6">Summary Page</h1>
+        <div className="max-w-2xl mx-auto p-6 space-y-8">
+            <h1 className="text-2xl font-bold">Summary Page</h1>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Summarize URL */}
-                <div className="p-4 border rounded-md space-y-4">
-                    <h2 className="text-lg font-semibold">Summarize URL</h2>
-                    <div className="space-y-2">
-                        <Input
-                            placeholder="Enter URL"
-                            value={urlValue}
-                            onChange={(e) => setUrlValue(e.target.value)}
-                        />
-                        <Input
-                            type="number"
-                            placeholder="Max Length (500)"
-                            value={urlMaxLen}
-                            onChange={(e) => setUrlMaxLen(Number(e.target.value))}
-                        />
-                        <Button
-                            onClick={handleSummarizeUrl}
-                            disabled={!urlValue.trim() || isLoadingUrl}
-                        >
-                            {isLoadingUrl ? "Summarizing..." : "Summarize URL"}
-                        </Button>
-                    </div>
-                    {urlError && <AlertErrorMessage message={urlError} />}
-                    {urlResult && (
-                        <div className="bg-gray-100 p-3 rounded-md space-y-2">
-                            <div className="flex items-center justify-between">
-                                <h3 className="font-semibold">URL Summary Result:</h3>
-                                <Button
-                                    variant="outline"
-                                    onClick={() => handleCopy(urlResult, setUrlCopied)}
-                                >
-                                    {urlCopied ? "Copied!" : "Copy"}
-                                </Button>
-                            </div>
-                            <div
-                                className="whitespace-pre-wrap"
-                                dangerouslySetInnerHTML={createDangerousHTML(urlResult)}
-                            />
-                        </div>
-                    )}
+            {/* Summarize URL */}
+            <div className="p-4 border rounded-md space-y-4">
+                <h2 className="text-lg font-semibold">Summarize URL</h2>
+                <div className="space-y-2">
+                    <Input
+                        placeholder="Enter URL"
+                        value={urlValue}
+                        onChange={(e) => setUrlValue(e.target.value)}
+                    />
+                    <Input
+                        type="number"
+                        placeholder="Max Length (500)"
+                        value={urlMaxLen}
+                        onChange={(e) => setUrlMaxLen(Number(e.target.value))}
+                    />
+                    <Button
+                        onClick={handleSummarizeUrl}
+                        disabled={!urlValue.trim() || isLoadingUrl}
+                    >
+                        {isLoadingUrl ? "Summarizing..." : "Summarize URL"}
+                    </Button>
                 </div>
+                {urlError && <AlertErrorMessage message={urlError} />}
 
-                {/* Summarize Text (GET) */}
-                <div className="p-4 border rounded-md space-y-4">
-                    <h2 className="text-lg font-semibold">Summarize Text (GET)</h2>
-                    <div className="space-y-2">
-                        <Input
-                            placeholder="Enter text for GET"
-                            value={textGet}
-                            onChange={(e) => setTextGet(e.target.value)}
-                        />
-                        <Button
-                            onClick={handleSummarizeTextGET}
-                            disabled={!textGet.trim() || isLoadingGet}
-                        >
-                            {isLoadingGet ? "Summarizing..." : "GET Summarize Text"}
-                        </Button>
-                    </div>
-                    {getError && <AlertErrorMessage message={getError} />}
-                    {getResult && (
-                        <div className="bg-gray-100 p-3 rounded-md space-y-2">
-                            <div className="flex items-center justify-between">
-                                <h3 className="font-semibold">GET Summary Result:</h3>
-                                <Button
-                                    variant="outline"
-                                    onClick={() => handleCopy(getResult, setGetCopied)}
-                                >
-                                    {getCopied ? "Copied!" : "Copy"}
-                                </Button>
-                            </div>
-                            <div
-                                className="whitespace-pre-wrap"
-                                dangerouslySetInnerHTML={createDangerousHTML(getResult)}
-                            />
+                {urlResult && (
+                    <div className="bg-gray-100 p-3 rounded-md space-y-2">
+                        <div className="flex items-center justify-between">
+                            <h3 className="font-semibold">URL Summary Result:</h3>
+                            <Button
+                                variant="outline"
+                                onClick={() => handleCopy(urlResult, setUrlCopied)}
+                            >
+                                {urlCopied ? "Copied!" : "Copy"}
+                            </Button>
                         </div>
-                    )}
-                </div>
 
-                {/* Summarize Text (POST) */}
-                <div className="p-4 border rounded-md space-y-4">
-                    <h2 className="text-lg font-semibold">Summarize Text (POST)</h2>
-                    <div className="space-y-2">
-                        <Input
-                            placeholder="Enter text for POST"
-                            value={textPost}
-                            onChange={(e) => setTextPost(e.target.value)}
+                        <div
+                            className="whitespace-pre-wrap"
+                            dangerouslySetInnerHTML={createDangerousHTML(urlResult)}
                         />
-                        <Input
-                            type="number"
-                            placeholder="Max Length (500)"
-                            value={postMaxLen}
-                            onChange={(e) => setPostMaxLen(Number(e.target.value))}
-                        />
-                        <Button
-                            onClick={handleSummarizeTextPOST}
-                            disabled={!textPost.trim() || isLoadingPost}
-                        >
-                            {isLoadingPost ? "Summarizing..." : "POST Summarize Text"}
-                        </Button>
                     </div>
-                    {postError && <AlertErrorMessage message={postError} />}
-                    {postResult && (
-                        <div className="bg-gray-100 p-3 rounded-md space-y-2">
-                            <div className="flex items-center justify-between">
-                                <h3 className="font-semibold">POST Summary Result:</h3>
-                                <Button
-                                    variant="outline"
-                                    onClick={() => handleCopy(postResult, setPostCopied)}
-                                >
-                                    {postCopied ? "Copied!" : "Copy"}
-                                </Button>
-                            </div>
-                            <div
-                                className="whitespace-pre-wrap"
-                                dangerouslySetInnerHTML={createDangerousHTML(postResult)}
-                            />
-                        </div>
-                    )}
+                )}
+            </div>
+
+            {/* Summarize Text (GET) */}
+            <div className="p-4 border rounded-md space-y-4">
+                <h2 className="text-lg font-semibold">Summarize Text (GET)</h2>
+                <div className="space-y-2">
+                    <Input
+                        placeholder="Enter text for GET"
+                        value={textGet}
+                        onChange={(e) => setTextGet(e.target.value)}
+                    />
+                    <Button
+                        onClick={handleSummarizeTextGET}
+                        disabled={!textGet.trim() || isLoadingGet}
+                    >
+                        {isLoadingGet ? "Summarizing..." : "GET Summarize Text"}
+                    </Button>
                 </div>
+                {getError && <AlertErrorMessage message={getError} />}
+
+                {getResult && (
+                    <div className="bg-gray-100 p-3 rounded-md space-y-2">
+                        <div className="flex items-center justify-between">
+                            <h3 className="font-semibold">GET Summary Result:</h3>
+                            <Button
+                                variant="outline"
+                                onClick={() => handleCopy(getResult, setGetCopied)}
+                            >
+                                {getCopied ? "Copied!" : "Copy"}
+                            </Button>
+                        </div>
+
+                        <div
+                            className="whitespace-pre-wrap"
+                            dangerouslySetInnerHTML={createDangerousHTML(getResult)}
+                        />
+                    </div>
+                )}
+            </div>
+
+            {/* Summarize Text (POST) */}
+            <div className="p-4 border rounded-md space-y-4">
+                <h2 className="text-lg font-semibold">Summarize Text (POST)</h2>
+                <div className="space-y-2">
+                    <Input
+                        placeholder="Enter text for POST"
+                        value={textPost}
+                        onChange={(e) => setTextPost(e.target.value)}
+                    />
+                    <Input
+                        type="number"
+                        placeholder="Max Length (500)"
+                        value={postMaxLen}
+                        onChange={(e) => setPostMaxLen(Number(e.target.value))}
+                    />
+                    <Button
+                        onClick={handleSummarizeTextPOST}
+                        disabled={!textPost.trim() || isLoadingPost}
+                    >
+                        {isLoadingPost ? "Summarizing..." : "POST Summarize Text"}
+                    </Button>
+                </div>
+                {postError && <AlertErrorMessage message={postError} />}
+
+                {postResult && (
+                    <div className="bg-gray-100 p-3 rounded-md space-y-2">
+                        <div className="flex items-center justify-between">
+                            <h3 className="font-semibold">POST Summary Result:</h3>
+                            <Button
+                                variant="outline"
+                                onClick={() => handleCopy(postResult, setPostCopied)}
+                            >
+                                {postCopied ? "Copied!" : "Copy"}
+                            </Button>
+                        </div>
+
+                        <div
+                            className="whitespace-pre-wrap"
+                            dangerouslySetInnerHTML={createDangerousHTML(postResult)}
+                        />
+                    </div>
+                )}
             </div>
         </div>
     );
