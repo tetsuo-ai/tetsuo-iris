@@ -19,7 +19,12 @@ const mediaPages = [
   {
     name: "Animate",
     description: "Generate RGB channel pass animation from image.",
-    href: "/media/dalle",
+    href: "/media/animation",
+  },
+  {
+    name: "KenSub Video",
+    description: "Generate video highlights in a single click.",
+    href: "/media/kensub",
   },
   {
     name: "Image API",

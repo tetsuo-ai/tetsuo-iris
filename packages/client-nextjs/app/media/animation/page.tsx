@@ -1,5 +1,5 @@
 import AnimationPage from "@/components/pages/MediaPage/AnimationPage";
 
-export default function Flux() {
+export default function Animation() {
     return <AnimationPage />;
 }
