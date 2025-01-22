@@ -17,6 +17,11 @@ const mediaPages = [
     href: "/media/dalle",
   },
   {
+    name: "Animate",
+    description: "Generate RGB channel pass animation from image.",
+    href: "/media/dalle",
+  },
+  {
     name: "Image API",
     description: "Fetch Logos, Memes, and List Images.",
     href: "/media/image",

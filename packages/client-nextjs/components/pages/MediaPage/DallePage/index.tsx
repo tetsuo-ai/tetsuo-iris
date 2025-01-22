@@ -35,7 +35,7 @@ const DallePage = () => {
                 n,
             });
 
-            const res = await fetch("/api/v1/image/dalle", {
+            const res = await fetch("https://services.tetsuo.ai/api/v1/image/dalle", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
