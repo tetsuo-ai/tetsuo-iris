@@ -12,14 +12,24 @@ const toolsPages = [
     href: "/tools/sentiment",
   },
   {
-    name: "Link Summary",
-    description: "Summarizes text in the URL provided.",
-    href: "/tools/linksummary",
+    name: "Text Summary",
+    description: "Summarizes text in the URL or body provided.",
+    href: "/tools/summary",
   },
   {
     name: "Text to Speech",
     description: "Narrates voice over for given text.",
     href: "/tools/speech",
+  },
+  {
+    name: "Code Analysis",
+    description: "Examines code in the GitHub repo URL or body provided.",
+    href: "/tools/code",
+  },
+  {
+    name: "Search the Web",
+    description: "Searches for your query and provides a sumary answer.",
+    href: "/tools/search",
   },
 ];
 
