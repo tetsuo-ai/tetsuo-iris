@@ -31,6 +31,11 @@ const toolsPages = [
     description: "Searches for your query and provides a sumary answer.",
     href: "/tools/search",
   },
+  {
+    name: "Health & Status",
+    description: "Evaluate the readiness of endpoints.",
+    href: "/tools/health",
+  },
 ];
 
 const ToolsCard: FC<{ page: typeof toolsPages[number] }> = ({ page }) => (
