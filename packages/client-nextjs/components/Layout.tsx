@@ -6,10 +6,12 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { CheckCircle, XCircle } from "lucide-react";
+import { CheckCircle, MessageCircle, Wallet, XCircle, Wrench, PlayIcon } from "lucide-react";
 import Link from "next/link";
 import Logo from "@/app/images/logo.webp";
 import { ThemeDropdown } from "./ThemeDropdown";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { usePathname } from "next/navigation";
 
 const WalletMultiButton = dynamic(
   () => import("@solana/wallet-adapter-react-ui").then((mod) => mod.WalletMultiButton),
@@ -25,7 +27,17 @@ const JUPITER_BALANCE_API = "/api/v1/jupiter/balance";
 const SOL_ICON = "https://cryptologos.cc/logos/solana-sol-logo.png";
 const TETSUO_ICON = Logo.src;
 
+const navItems = [
+  { value: "finance", label: "Finance", icon: Wallet, href: "/finance" },
+  { value: "chat", label: "Chat", icon: MessageCircle, href: "/chat" },
+  { value: "tools", label: "Tools", icon: Wrench, href: "/tools" },
+  { value: "media", label: "Media", icon: PlayIcon, href: "/media" },
+];
+
 export const Layout: FC<{ children: ReactNode }> = ({ children }) => {
+  const pathname = usePathname();
+  const activeTab = pathname.split("/")?.[1] || "finance";
+
   const { publicKey } = useWallet();
   const [priceData, setPriceData] = useState<{ [key: string]: string }>({});
   const [balance, setBalance] = useState<string | null>(null);
@@ -343,6 +355,22 @@ useEffect(() => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Footer Tabs */}
+      <footer className="fixed inset-x-0 bottom-0 bg-gray-100">
+        <Tabs defaultValue={activeTab} className="w-full h-full">
+          <TabsList className="w-full h-full">
+            {navItems.map(({ value, label, icon: Icon, href }) => (
+              <TabsTrigger key={value} value={value} asChild className="w-1/4">
+                <Link href={href} className="flex flex-col items-center">
+                  <Icon size={20} />
+                  <span className="text-xs">{label}</span>
+                </Link>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      </footer>
     </div>
   );
 }
