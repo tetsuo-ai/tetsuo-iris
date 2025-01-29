@@ -1,61 +1,84 @@
 import { API_URL, BEARER_TOKEN } from "@/lib/serverConstants";
 import { NextResponse } from "next/server";
 
+// Default image for TETSUO (site logo)
+const TETSUO_IMAGE = "/images/logo.webp";
+
+// Fallback image for other tokens (if necessary)
+const DEFAULT_IMAGE = "/images/default-token.png";
+
 export async function POST(request: Request) {
     try {
-        console.log("[API ROUTE] Incoming request to Jupiter API Proxy");
-
-        // Extract the endpoint from the URL
-        const urlParts = request.url.split("/");
-        const endpoint = urlParts[urlParts.length - 1];
-        console.log(`[API ROUTE] Extracted endpoint: ${endpoint}`);
+        console.log("[API ROUTE] Incoming request to Jupiter API Proxy (Token Data)");
 
         const body = await request.json();
         console.log(`[API ROUTE] Parsed request body:`, body);
 
-        // Validate the endpoint
-        const validEndpoints = [
-            "buy",
-            "swap",
-            "token_data",
-            "balance",
-            "price",
-        ];
-        if (!validEndpoints.includes(endpoint)) {
-            console.error(`[API ROUTE] Invalid endpoint: ${endpoint}`);
-            return NextResponse.json({ error: "Invalid endpoint" }, { status: 400 });
+        let { ticker, address } = body;
+
+        if (!ticker || !address) {
+            console.error("[API ROUTE] Missing required fields");
+            return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 
-        // Construct the full API URL
-        const apiEndpoint = `${API_URL.replace(/\/?$/, "/")}api/v1/jupiter/${endpoint}`;
-        console.log(`[API ROUTE] Forwarding request to: ${apiEndpoint}`);
+        let tokenData: { [key: string]: any } = {};
 
-        // Forward the request to the external API
-        const response = await fetch(apiEndpoint, {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${BEARER_TOKEN}`,
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify(body),
-        });
-
-        console.log(`[API ROUTE] Response status from external API: ${response.status}`);
-        const contentType = response.headers.get("content-type");
-        console.log(`[API ROUTE] Response content-type: ${contentType}`);
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`[API ROUTE] Error response from API:`, errorText);
-            return NextResponse.json({ error: errorText || "Request failed" }, { status: response.status });
+        // Directly assign TETSUO's image as the site logo
+        if (address === "8i51XNNpGaKaj4G4nDdmQh95v4FKAxw8mhtaRoKd9tE8") {
+            tokenData[address] = {
+                name: "TETSUO",
+                symbol: "TETSUO",
+                image: TETSUO_IMAGE,
+            };
+            console.log(`[API ROUTE] Using site logo for TETSUO.`);
+            return NextResponse.json(tokenData, { status: 200 });
         }
 
-        const data = await response.json();
-        console.log(`[API ROUTE] Successful response from API:`, data);
+        try {
+            // Fetch token metadata from Metaplex
+            console.log(`[API ROUTE] Fetching metadata for: ${address}`);
+            const response = await fetch(`${API_URL}/api/v1/jupiter/token_metadata`, {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${BEARER_TOKEN}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ address }),
+            });
 
-        return NextResponse.json(data, { status: response.status });
+            console.log(`[API ROUTE] Response status from Metaplex: ${response.status}`);
+
+            if (!response.ok) {
+                console.warn(`[WARNING] Metadata not found for ${address}. Using fallback.`);
+                tokenData[address] = {
+                    name: ticker || "Unknown Token",
+                    symbol: ticker || "???",
+                    image: DEFAULT_IMAGE, // Default fallback
+                };
+                return NextResponse.json(tokenData, { status: 200 });
+            }
+
+            const metadata = await response.json();
+            tokenData[address] = {
+                name: metadata?.data?.name || ticker || "Unknown Token",
+                symbol: metadata?.data?.symbol || ticker || "???",
+                image: DEFAULT_IMAGE, // No need to fetch from IPFS, just use default
+            };
+
+        } catch (error) {
+            console.error(`[ERROR] Fetching metadata for ${address}:`, error);
+            tokenData[address] = {
+                name: ticker || "Unknown Token",
+                symbol: ticker || "???",
+                image: DEFAULT_IMAGE,
+            };
+        }
+
+        console.log(`[API ROUTE] Final Token Data:`, tokenData);
+        return NextResponse.json(tokenData, { status: 200 });
+
     } catch (error) {
-        console.error(`[API ROUTE] Error in API route:`, error);
+        console.error(`[API ROUTE] Error in Token Data API route:`, error);
         return NextResponse.json({ error: "Unexpected server error" }, { status: 500 });
     }
 }

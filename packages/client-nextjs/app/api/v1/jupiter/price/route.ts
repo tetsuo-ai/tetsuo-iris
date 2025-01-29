@@ -1,61 +1,62 @@
 import { API_URL, BEARER_TOKEN } from "@/lib/serverConstants";
 import { NextResponse } from "next/server";
+import { PublicKey } from "@solana/web3.js";
 
 export async function POST(request: Request) {
     try {
-        console.log("[API ROUTE] Incoming request to Jupiter API Proxy");
-
-        // Extract the endpoint from the URL
-        const urlParts = request.url.split("/");
-        const endpoint = urlParts[urlParts.length - 1];
-        console.log(`[API ROUTE] Extracted endpoint: ${endpoint}`);
+        console.log("[API ROUTE] Incoming request to Jupiter API Proxy (Price)");
 
         const body = await request.json();
         console.log(`[API ROUTE] Parsed request body:`, body);
 
-        // Validate the endpoint
-        const validEndpoints = [
-            "buy",
-            "swap",
-            "token_data",
-            "balance",
-            "price",
-        ];
-        if (!validEndpoints.includes(endpoint)) {
-            console.error(`[API ROUTE] Invalid endpoint: ${endpoint}`);
-            return NextResponse.json({ error: "Invalid endpoint" }, { status: 400 });
+        let { contractAddresses } = body;
+
+        if (!Array.isArray(contractAddresses) || contractAddresses.length === 0) {
+            console.error("[API ROUTE] Missing or invalid contract addresses");
+            return NextResponse.json({ error: "Missing or invalid contract addresses" }, { status: 400 });
         }
 
-        // Construct the full API URL
-        const apiEndpoint = `${API_URL.replace(/\/?$/, "/")}api/v1/jupiter/${endpoint}`;
-        console.log(`[API ROUTE] Forwarding request to: ${apiEndpoint}`);
-
-        // Forward the request to the external API
-        const response = await fetch(apiEndpoint, {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${BEARER_TOKEN}`,
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify(body),
-        });
-
-        console.log(`[API ROUTE] Response status from external API: ${response.status}`);
-        const contentType = response.headers.get("content-type");
-        console.log(`[API ROUTE] Response content-type: ${contentType}`);
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`[API ROUTE] Error response from API:`, errorText);
-            return NextResponse.json({ error: errorText || "Request failed" }, { status: response.status });
+        // Validate each Base58 address
+        for (const address of contractAddresses) {
+            try {
+                new PublicKey(address);
+            } catch (error) {
+                console.error("[API ROUTE] Invalid Base58 address:", address, error);
+                return NextResponse.json({ error: `Invalid Base58 address: ${address}` }, { status: 400 });
+            }
         }
 
-        const data = await response.json();
-        console.log(`[API ROUTE] Successful response from API:`, data);
+        let prices: { [key: string]: string } = {};
 
-        return NextResponse.json(data, { status: response.status });
+        // Fetch price for each contract individually
+        for (const contractAddress of contractAddresses) {
+            console.log(`[API ROUTE] Fetching price for contract: ${contractAddress}`);
+
+            const response = await fetch(`${API_URL}/api/v1/jupiter/price`, {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${BEARER_TOKEN}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ ca: contractAddress }), // Fix: Send single string
+            });
+
+            console.log(`[API ROUTE] Response status from external API: ${response.status}`);
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error(`[API ROUTE] Error fetching price for ${contractAddress}:`, errorText);
+                continue;
+            }
+
+            const data = await response.json();
+            prices[contractAddress] = data?.price || "N/A";
+        }
+
+        console.log(`[API ROUTE] Final Price Data:`, prices);
+        return NextResponse.json(prices, { status: 200 });
+
     } catch (error) {
-        console.error(`[API ROUTE] Error in API route:`, error);
+        console.error(`[API ROUTE] Error in Price API route:`, error);
         return NextResponse.json({ error: "Unexpected server error" }, { status: 500 });
     }
 }
