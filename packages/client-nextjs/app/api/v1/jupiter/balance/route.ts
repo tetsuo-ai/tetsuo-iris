@@ -1,61 +1,55 @@
 import { API_URL, BEARER_TOKEN } from "@/lib/serverConstants";
 import { NextResponse } from "next/server";
+import { PublicKey } from "@solana/web3.js";
 
 export async function POST(request: Request) {
     try {
-        console.log("[API ROUTE] Incoming request to Jupiter API Proxy");
-
-        // Extract the endpoint from the URL
-        const urlParts = request.url.split("/");
-        const endpoint = urlParts[urlParts.length - 1];
-        console.log(`[API ROUTE] Extracted endpoint: ${endpoint}`);
+        console.log("[API ROUTE] Incoming request to Jupiter API Proxy (Balance)");
 
         const body = await request.json();
         console.log(`[API ROUTE] Parsed request body:`, body);
 
-        // Validate the endpoint
-        const validEndpoints = [
-            "buy",
-            "swap",
-            "token_data",
-            "balance",
-            "price",
-        ];
-        if (!validEndpoints.includes(endpoint)) {
-            console.error(`[API ROUTE] Invalid endpoint: ${endpoint}`);
-            return NextResponse.json({ error: "Invalid endpoint" }, { status: 400 });
+        const { walletAddress } = body;
+
+        if (!walletAddress) {
+            console.error("[API ROUTE] Missing wallet address");
+            return NextResponse.json({ error: "Missing wallet address" }, { status: 400 });
         }
 
-        // Construct the full API URL
-        const apiEndpoint = `${API_URL.replace(/\/?$/, "/")}api/v1/jupiter/${endpoint}`;
-        console.log(`[API ROUTE] Forwarding request to: ${apiEndpoint}`);
+        // Validate Base58 Wallet Address
+        try {
+            new PublicKey(walletAddress);
+        } catch (error) {
+            console.error("[API ROUTE] Invalid Base58 wallet address:", error);
+            return NextResponse.json({ error: "Invalid wallet address" }, { status: 400 });
+        }
 
-        // Forward the request to the external API
+        // Forward request to Jupiter API (renaming `walletAddress` to `wallet`)
+        const apiEndpoint = `${API_URL}/api/v1/jupiter/balance`;
+        console.log(`[API ROUTE] Fetching balance for wallet: ${walletAddress}`);
+
         const response = await fetch(apiEndpoint, {
             method: "POST",
             headers: {
-                "Authorization": `Bearer ${BEARER_TOKEN}`,
+                Authorization: `Bearer ${BEARER_TOKEN}`,
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify(body),
+            body: JSON.stringify({ wallet: walletAddress }), // Fix field name
         });
 
         console.log(`[API ROUTE] Response status from external API: ${response.status}`);
-        const contentType = response.headers.get("content-type");
-        console.log(`[API ROUTE] Response content-type: ${contentType}`);
-
         if (!response.ok) {
             const errorText = await response.text();
-            console.error(`[API ROUTE] Error response from API:`, errorText);
+            console.error(`[API ROUTE] Error fetching balance:`, errorText);
             return NextResponse.json({ error: errorText || "Request failed" }, { status: response.status });
         }
 
         const data = await response.json();
-        console.log(`[API ROUTE] Successful response from API:`, data);
-
+        console.log(`[API ROUTE] Balance data:`, data);
         return NextResponse.json(data, { status: response.status });
+
     } catch (error) {
-        console.error(`[API ROUTE] Error in API route:`, error);
+        console.error(`[API ROUTE] Error in Balance API route:`, error);
         return NextResponse.json({ error: "Unexpected server error" }, { status: 500 });
     }
 }
