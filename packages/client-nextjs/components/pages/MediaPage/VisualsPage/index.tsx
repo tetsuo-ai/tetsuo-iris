@@ -11,14 +11,15 @@ import { AlertErrorMessage } from "@/components/shared/AlertErrorMessage";
 interface MediaItem {
     type: string;
     src: string;
-    x: number; // percent relative to workspace
-    y: number; // percent relative to workspace
+    x: number;
+    y: number;
     scale: number;
     rotation: number;
     opacity: number;
     visible: boolean;
     showAt: number;
     hideAt: number;
+    isManuallyControlled?: boolean; // New flag
 }
 
 interface CustomTextItem {
@@ -92,6 +93,7 @@ const defaultAscii = `##############################%@@@@@@@%%%%%##############%
 // --- STATE DECLARATIONS ---
 const [mediaList, setMediaList] = useState<MediaItem[]>([]);
 const [mediaUrl, setMediaUrl] = useState<string>("");
+    const [zoomLevel, setZoomLevel] = useState<number>(1);
 
 const [customTexts, setCustomTexts] = useState<CustomTextItem[]>([]);
 const [customTextInput, setCustomTextInput] = useState<string>("");
@@ -99,7 +101,7 @@ const [customTextInput, setCustomTextInput] = useState<string>("");
 const [videoSpeed, setVideoSpeed] = useState<number>(1);
 const [currentTime, setCurrentTime] = useState<number>(0);
 const [globalGlitch, setGlobalGlitch] = useState<number>(0);
-const [backgroundEnabled, setBackgroundEnabled] = useState<boolean>(true);
+const [backgroundEnabled, setBackgroundEnabled] = useState(false);
 const [cyberGlitchMode, setCyberGlitchMode] = useState<boolean>(false);
 const [flashSpeed, setFlashSpeed] = useState<number>(3);
 const [flashIntensity, setFlashIntensity] = useState<number>(5);
@@ -126,6 +128,14 @@ const imageDragStarts = useRef<{ [key: number]: { mouseX: number; mouseY: number
 const customTextDragStarts = useRef<{ [id: number]: { mouseX: number; mouseY: number; posX: number; posY: number } }>({});
 const asciiDragStart = useRef<{ mouseX: number; mouseY: number; posX: number; posY: number } | null>(null);
 
+    // Load media files from localStorage on mount
+    useEffect(() => {
+        localStorage.setItem("mediaList", JSON.stringify(mediaList));
+    }, [mediaList]);
+
+
+
+    
 // --- Add default ASCII as a custom text element on mount if none exist ---
 useEffect(() => {
     if (customTexts.length === 0) {
@@ -173,12 +183,16 @@ useEffect(() => {
 }, []);
 useEffect(() => {
     setMediaList(prev =>
-        prev.map(media => ({
-            ...media,
-            visible: media.showAt <= currentTime && media.hideAt >= currentTime,
-        }))
+        prev.map(media => {
+            if (media.isManuallyControlled) return media; // Skip manually controlled items
+            return {
+                ...media,
+                visible: media.showAt <= currentTime && media.hideAt >= currentTime,
+            };
+        })
     );
 }, [currentTime]);
+
 
 // --- CYBER GLITCH / MATRIX RAIN BACKGROUND ---
 useEffect(() => {
@@ -300,6 +314,44 @@ useEffect(() => {
         style.parentNode && style.parentNode.removeChild(style);
     };
 }, [backgroundEnabled]);
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            const keyMap: Record<string, number> = {
+                "1": 0, "2": 1, "3": 2, "4": 3, "5": 4,
+                "6": 5, "7": 6, "8": 7, "9": 8, "0": 9,
+                "Numpad1": 0, "Numpad2": 1, "Numpad3": 2, "Numpad4": 3, "Numpad5": 4,
+                "Numpad6": 5, "Numpad7": 6, "Numpad8": 7, "Numpad9": 8, "Numpad0": 9,
+            };
+
+            const slotIndex = keyMap[event.key];
+            if (slotIndex !== undefined && slotIndex < 10) {
+                setMediaList(prev =>
+                    prev.map((item, index) =>
+                        index === slotIndex
+                            ? { ...item, visible: !item.visible, isManuallyControlled: true }
+                            : item
+                    )
+                );
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => {
+            window.removeEventListener("keydown", handleKeyDown);
+        };
+    }, []);
+
+    const toggleMediaVisibility = (index: number) => {
+        setMediaList(prev =>
+            prev.map((media, i) =>
+                i === index
+                    ? { ...media, visible: !media.visible, isManuallyControlled: true }
+                    : media
+            )
+        );
+    };
+
+
 
 // --- GLOBAL GLITCH EFFECT (workspace shake) ---
 useEffect(() => {
@@ -362,45 +414,69 @@ const onVideoMouseDown = (e: React.MouseEvent) => {
     document.addEventListener("mouseup", onMouseUp);
 };
 
-// Media items dragging
-const onImageMouseDown = (e: React.MouseEvent, index: number) => {
-    e.preventDefault();
-    imageDragStarts.current[index] = {
-        mouseX: e.clientX,
-        mouseY: e.clientY,
-        posX: mediaList[index].x,
-        posY: mediaList[index].y,
+    // --- Layer Management Functions ---
+    const moveElementForward = (index: number) => {
+        setMediaList(prev => {
+            if (index >= prev.length - 1) return prev; // Already at the top
+            const updatedList = [...prev];
+            [updatedList[index], updatedList[index + 1]] = [updatedList[index + 1], updatedList[index]];
+            return updatedList;
+        });
     };
-    const onMouseMove = (event: MouseEvent) => {
-        const start = imageDragStarts.current[index];
-        if (start) {
-            const { deltaX, deltaY } = getDeltaPercentages(
-                start.mouseX,
-                start.mouseY,
-                event.clientX,
-                event.clientY
-            );
-            setMediaList(prev =>
-                prev.map((item, i) =>
-                    i === index
-                        ? {
-                            ...item,
-                            x: clamp(start.posX + deltaX, 0, 100),
-                            y: clamp(start.posY + deltaY, 0, 100),
-                        }
-                        : item
-                )
-            );
-        }
+
+    const moveElementBackward = (index: number) => {
+        setMediaList(prev => {
+            if (index <= 0) return prev; // Already at the bottom
+            const updatedList = [...prev];
+            [updatedList[index], updatedList[index - 1]] = [updatedList[index - 1], updatedList[index]];
+            return updatedList;
+        });
     };
-    const onMouseUp = () => {
-        document.removeEventListener("mousemove", onMouseMove);
-        document.removeEventListener("mouseup", onMouseUp);
-        delete imageDragStarts.current[index];
+
+    // Media items dragging
+    const onImageMouseDown = (e: React.MouseEvent, index: number) => {
+        e.preventDefault();
+        imageDragStarts.current[index] = {
+            mouseX: e.clientX,
+            mouseY: e.clientY,
+            posX: mediaList[index].x,
+            posY: mediaList[index].y,
+        };
+
+        const onMouseMove = (event: MouseEvent) => {
+            const start = imageDragStarts.current[index];
+            if (start) {
+                const { deltaX, deltaY } = getDeltaPercentages(
+                    start.mouseX,
+                    start.mouseY,
+                    event.clientX,
+                    event.clientY
+                );
+                setMediaList(prev =>
+                    prev.map((item, i) =>
+                        i === index
+                            ? {
+                                ...item,
+                                x: clamp(start.posX + deltaX, 0, 100),
+                                y: clamp(start.posY + deltaY, 0, 100),
+                            }
+                            : item
+                    )
+                );
+            }
+        };
+
+        const onMouseUp = () => {
+            document.removeEventListener("mousemove", onMouseMove);
+            document.removeEventListener("mouseup", onMouseUp);
+            delete imageDragStarts.current[index];
+        };
+
+        document.addEventListener("mousemove", onMouseMove);
+        document.addEventListener("mouseup", onMouseUp);
     };
-    document.addEventListener("mousemove", onMouseMove);
-    document.addEventListener("mouseup", onMouseUp);
-};
+
+
 
 // Custom text elements dragging
 const onCustomTextMouseDown = (e: React.MouseEvent, id: number) => {
@@ -471,16 +547,13 @@ const onDashboardMouseDown = (e: React.MouseEvent) => {
 /* ================================
    MEDIA FUNCTIONS
 =================================== */
-const addMedia = () => {
-    if (mediaUrl.trim()) {
-        let type = "";
-        if (mediaUrl.match(/\.(jpeg|jpg|png|gif)$/i)) type = "image";
-        else if (mediaUrl.match(/\.(mp4|webm|ogg)$/i)) type = "video";
-        else if (mediaUrl.match(/\.(mp3|wav|ogg)$/i)) type = "audio";
-        if (type) {
-            setMediaList(prev => [
-                ...prev,
-                {
+    const addMedia = () => {
+        if (mediaUrl.trim()) {
+            let type = "";
+            if (mediaUrl.match(/\.(jpeg|jpg|png|gif)$/i)) type = "image";
+            else if (mediaUrl.match(/\.(mp4|webm|ogg)$/i)) type = "video";
+            if (type) {
+                const newMedia = {
                     type,
                     src: mediaUrl,
                     x: 50,
@@ -491,16 +564,20 @@ const addMedia = () => {
                     visible: true,
                     showAt: 0,
                     hideAt: 120,
-                },
-            ]);
-            setMediaUrl("");
+                };
+                const updatedMedia = [...mediaList, newMedia];
+                setMediaList(updatedMedia);
+                localStorage.setItem("mediaList", JSON.stringify(updatedMedia)); // Save to localStorage
+                setMediaUrl("");
+            }
         }
-    }
-};
+    };
 
-const removeMedia = (index: number) => {
-    setMediaList(prev => prev.filter((_, i) => i !== index));
-};
+    const removeMedia = (index: number) => {
+        const updatedMedia = mediaList.filter((_, i) => i !== index);
+        setMediaList(updatedMedia);
+        localStorage.setItem("mediaList", JSON.stringify(updatedMedia)); // Update localStorage
+    };
 
 // Dummy play handler for video/audio
     const handlePlay = () => {
@@ -512,16 +589,21 @@ const removeMedia = (index: number) => {
 
             if (video && video.paused) {
                 video.play();
+            } else if (video && !video.paused) {
+                video.pause();
             }
 
             if (audio && audio.paused) {
                 audio.play();
+            } else if (audio && !audio.paused) {
+                audio.pause();
             }
         } catch (err) {
             console.error("Error while starting playback:", err);
             setError("An unexpected error occurred during playback.");
         }
     };
+
 
 
 // Add a new custom text element
@@ -541,196 +623,213 @@ const addCustomText = () => {
     setCustomTextInput("");
 };
 
+    // --- ZOOM FUNCTIONALITY ---
+    const handleZoomChange = (delta: number) => {
+        setZoomLevel(prevZoom => clamp(prevZoom + delta, 0.5, 3));
+    };
+
 // --- CONTEXTUAL OPTIONS PANEL ---
-const renderOptionsPanel = () => {
-    if (!selectedElement) return null;
-    if (selectedElement.type === "media") {
-        const media = mediaList[selectedElement.index];
-        return (
-            <div
-                className="absolute z-50 bg-gray-900 p-2 border border-yellow-500"
-                style={{ right: "10px", bottom: "10px", width: "300px" }}
-            >
-                <h2 className="text-lg font-bold mb-2">Media Options</h2>
-                <Input
-                    type="text"
-                    placeholder="Media URL"
-                    value={media.src}
-                    onChange={(e) =>
-                        setMediaList(prev =>
-                            prev.map((item, i) =>
-                                i === selectedElement.index ? { ...item, src: e.target.value } : item
-                            )
-                        )
-                    }
-                />
-                <div className="mt-2">
-                    <p className="text-sm">Scale</p>
-                    <Slider
-                        min={0.5}
-                        max={3}
-                        step={0.1}
-                        value={[media.scale]}
-                        onValueChange={(value: number[]) =>
-                            setMediaList(prev =>
-                                prev.map((item, i) =>
-                                    i === selectedElement.index ? { ...item, scale: value[0] } : item
-                                )
-                            )
-                        }
-                    />
-                </div>
-                <div className="mt-2">
-                    <p className="text-sm">Rotation</p>
-                    <Slider
-                        min={0}
-                        max={360}
-                        step={1}
-                        value={[media.rotation]}
-                        onValueChange={(value: number[]) =>
-                            setMediaList(prev =>
-                                prev.map((item, i) =>
-                                    i === selectedElement.index ? { ...item, rotation: value[0] } : item
-                                )
-                            )
-                        }
-                    />
-                </div>
-                <div className="mt-2">
-                    <p className="text-sm">Opacity</p>
-                    <Slider
-                        min={0}
-                        max={1}
-                        step={0.1}
-                        value={[media.opacity]}
-                        onValueChange={(value: number[]) =>
-                            setMediaList(prev =>
-                                prev.map((item, i) =>
-                                    i === selectedElement.index ? { ...item, opacity: value[0] } : item
-                                )
-                            )
-                        }
-                    />
-                </div>
-                <Button
-                    onClick={() => {
-                        removeMedia(selectedElement.index);
-                        setSelectedElement(null);
-                    }}
-                    className="bg-red-600 mt-2 w-full"
+    const renderOptionsPanel = () => {
+        if (!selectedElement) return null;
+
+        if (selectedElement.type === "media") {
+            const media = mediaList[selectedElement.index];
+            return (
+                <div
+                    className="absolute z-50 bg-gray-900 p-2 border border-yellow-500"
+                    style={{ right: "10px", bottom: "10px", width: "300px" }}
                 >
-                    Remove Media
-                </Button>
-                <Button
-                    onClick={() => setSelectedElement(null)}
-                    className="bg-gray-600 mt-2 w-full"
+                    <h2 className="text-lg font-bold mb-2">Media Options</h2>
+                    <div className="mt-2">
+                        <p className="text-sm">Scale</p>
+                        <Slider
+                            min={0.5}
+                            max={3}
+                            step={0.1}
+                            value={[media.scale]}
+                            onValueChange={(value: number[]) => {
+                                const updatedScale = value[0];
+                                setMediaList(prev =>
+                                    prev.map((item, i) =>
+                                        i === selectedElement.index
+                                            ? { ...item, scale: updatedScale }
+                                            : item
+                                    )
+                                );
+                            }}
+                        />
+                    </div>
+                    <div className="mt-2">
+                        <p className="text-sm">Rotation</p>
+                        <Slider
+                            min={0}
+                            max={360}
+                            step={1}
+                            value={[media.rotation]}
+                            onValueChange={(value: number[]) => {
+                                const updatedRotation = value[0];
+                                setMediaList(prev =>
+                                    prev.map((item, i) =>
+                                        i === selectedElement.index
+                                            ? { ...item, rotation: updatedRotation }
+                                            : item
+                                    )
+                                );
+                            }}
+                        />
+                    </div>
+                    <div className="mt-2">
+                        <p className="text-sm">Opacity</p>
+                        <Slider
+                            min={0}
+                            max={1}
+                            step={0.1}
+                            value={[media.opacity]}
+                            onValueChange={(value: number[]) => {
+                                const updatedOpacity = value[0];
+                                setMediaList(prev =>
+                                    prev.map((item, i) =>
+                                        i === selectedElement.index
+                                            ? { ...item, opacity: updatedOpacity }
+                                            : item
+                                    )
+                                );
+                            }}
+                        />
+                    </div>
+                    <Button
+                        onClick={() => {
+                            removeMedia(selectedElement.index);
+                            setSelectedElement(null);
+                        }}
+                        className="bg-red-600 mt-2 w-full"
+                    >
+                        Remove Media
+                    </Button>
+                    <Button
+                        onClick={() => setSelectedElement(null)}
+                        className="bg-gray-600 mt-2 w-full"
+                    >
+                        Close Options
+                    </Button>
+                </div>
+            );
+        } else if (selectedElement.type === "customText") {
+            const customText = customTexts[selectedElement.index];
+            return (
+                <div
+                    className="absolute z-50 bg-gray-900 p-2 border border-yellow-500"
+                    style={{ right: "10px", bottom: "10px", width: "300px" }}
                 >
-                    Close Options
-                </Button>
-            </div>
-        );
-    } else if (selectedElement.type === "customText") {
-        const ct = customTexts[selectedElement.index];
-        return (
-            <div
-                className="absolute z-50 bg-gray-900 p-2 border border-yellow-500"
-                style={{ right: "10px", bottom: "10px", width: "300px" }}
-            >
-                <h2 className="text-lg font-bold mb-2">Text Options</h2>
-                <Input
-                    type="text"
-                    placeholder="Edit Text"
-                    value={ct.text}
-                    onChange={(e) =>
-                        setCustomTexts(prev =>
-                            prev.map((item, i) =>
-                                i === selectedElement.index ? { ...item, text: e.target.value } : item
-                            )
-                        )
-                    }
-                />
-                <div className="mt-2">
-                    <p className="text-sm">Text Color</p>
+                    <h2 className="text-lg font-bold mb-2">ASCII/Text Options</h2>
                     <Input
-                        type="color"
-                        value={ct.color}
+                        type="text"
+                        placeholder="Edit Text"
+                        value={customText.text}
                         onChange={(e) =>
                             setCustomTexts(prev =>
                                 prev.map((item, i) =>
-                                    i === selectedElement.index ? { ...item, color: e.target.value } : item
+                                    i === selectedElement.index
+                                        ? { ...item, text: e.target.value }
+                                        : item
                                 )
                             )
                         }
                     />
-                </div>
-                <div className="mt-2">
-                    <p className="text-sm">Scale</p>
-                    <Slider
-                        min={0.5}
-                        max={3}
-                        step={0.1}
-                        value={[ct.scale]}
-                        onValueChange={(value: number[]) =>
-                            setCustomTexts(prev =>
-                                prev.map((item, i) =>
-                                    i === selectedElement.index ? { ...item, scale: value[0] } : item
+                    <div className="mt-2">
+                        <p className="text-sm">Text Color</p>
+                        <Input
+                            type="color"
+                            value={customText.color}
+                            onChange={(e) =>
+                                setCustomTexts(prev =>
+                                    prev.map((item, i) =>
+                                        i === selectedElement.index
+                                            ? { ...item, color: e.target.value }
+                                            : item
+                                    )
                                 )
-                            )
-                        }
-                    />
-                </div>
-                <div className="mt-2">
-                    <p className="text-sm">Flash Speed</p>
-                    <Slider
-                        min={0.5}
-                        max={10}
-                        step={0.1}
-                        value={[ct.flashSpeed]}
-                        onValueChange={(value: number[]) =>
-                            setCustomTexts(prev =>
-                                prev.map((item, i) =>
-                                    i === selectedElement.index ? { ...item, flashSpeed: value[0] } : item
+                            }
+                        />
+                    </div>
+                    <div className="mt-2">
+                        <p className="text-sm">Scale</p>
+                        <Slider
+                            min={0.5}
+                            max={3}
+                            step={0.1}
+                            value={[customText.scale]}
+                            onValueChange={(value: number[]) =>
+                                setCustomTexts(prev =>
+                                    prev.map((item, i) =>
+                                        i === selectedElement.index
+                                            ? { ...item, scale: value[0] }
+                                            : item
+                                    )
                                 )
-                            )
-                        }
-                    />
-                </div>
-                <div className="mt-2">
-                    <p className="text-sm">Flash Intensity</p>
-                    <Slider
-                        min={1}
-                        max={10}
-                        step={1}
-                        value={[ct.flashIntensity]}
-                        onValueChange={(value: number[]) =>
-                            setCustomTexts(prev =>
-                                prev.map((item, i) =>
-                                    i === selectedElement.index ? { ...item, flashIntensity: value[0] } : item
+                            }
+                        />
+                    </div>
+                    <div className="mt-2">
+                        <p className="text-sm">Flash Speed</p>
+                        <Slider
+                            min={0.5}
+                            max={10}
+                            step={0.1}
+                            value={[customText.flashSpeed]}
+                            onValueChange={(value: number[]) =>
+                                setCustomTexts(prev =>
+                                    prev.map((item, i) =>
+                                        i === selectedElement.index
+                                            ? { ...item, flashSpeed: value[0] }
+                                            : item
+                                    )
                                 )
-                            )
-                        }
-                    />
+                            }
+                        />
+                    </div>
+                    <div className="mt-2">
+                        <p className="text-sm">Flash Intensity</p>
+                        <Slider
+                            min={1}
+                            max={10}
+                            step={1}
+                            value={[customText.flashIntensity]}
+                            onValueChange={(value: number[]) =>
+                                setCustomTexts(prev =>
+                                    prev.map((item, i) =>
+                                        i === selectedElement.index
+                                            ? { ...item, flashIntensity: value[0] }
+                                            : item
+                                    )
+                                )
+                            }
+                        />
+                    </div>
+                    <Button
+                        onClick={() => {
+                            setCustomTexts(prev => prev.filter((_, i) => i !== selectedElement.index));
+                            setSelectedElement(null);
+                        }}
+                        className="bg-red-600 mt-2 w-full"
+                    >
+                        Remove Text
+                    </Button>
+                    <Button
+                        onClick={() => setSelectedElement(null)}
+                        className="bg-gray-600 mt-2 w-full"
+                    >
+                        Close Options
+                    </Button>
                 </div>
-                <Button
-                    onClick={() => {
-                        setCustomTexts(prev => prev.filter((_, i) => i !== selectedElement.index));
-                        setSelectedElement(null);
-                    }}
-                    className="bg-red-600 mt-2 w-full"
-                >
-                    Remove Text
-                </Button>
-                <Button
-                    onClick={() => setSelectedElement(null)}
-                    className="bg-gray-600 mt-2 w-full"
-                >
-                    Close Options
-                </Button>
-            </div>
-        );
-    }
-    return null;
-};
+            );
+        }
+
+        return null;
+    };
+
+
+
 
 // --- CLEAR ALL ELEMENTS (except default custom text) ---
 const clearAllElements = () => {
@@ -753,11 +852,24 @@ return (
         </div>
 
         {/* Control Panel / Dashboard */}
+    
+
         <div
             className="absolute bg-gray-800 p-2 rounded-md cursor-move z-50"
             style={{ left: `${dashboardPos.x}px`, top: `${dashboardPos.y}px` }}
             onMouseDown={onDashboardMouseDown}
         >
+            <div className="mt-4">
+                <p className="text-sm">Zoom Level</p>
+                <div className="flex gap-2">
+                    <Button onClick={() => handleZoomChange(-0.1)} className="bg-gray-600">
+                        Zoom Out
+                    </Button>
+                    <Button onClick={() => handleZoomChange(0.1)} className="bg-gray-600">
+                        Zoom In
+                    </Button>
+                </div>
+            </div>
             <Input
                 type="text"
                 placeholder="Media URL"
@@ -829,19 +941,22 @@ return (
         </div>
 
         {/* Workspace Container (centered drop zone) */}
+        {/* Workspace */}
         <div
             id="workspace"
             style={{
                 position: "absolute",
                 left: "50%",
                 top: "50%",
-                transform: "translate(-50%, -50%)",
+                transform: `translate(-50%, -50%) scale(${zoomLevel})`,
                 width: `${containerWidth}px`,
                 height: `${containerHeight}px`,
                 border: "1px solid white",
                 background: "transparent",
+                transformOrigin: "center",
             }}
         >
+
             {/* Draggable Video Player (resizable) */}
             <div
                 style={{
@@ -865,7 +980,7 @@ return (
                 ></video>
             </div>
 
-            {/* Draggable Media Items (resizable) */}
+            {/* Media Items */}
             {mediaList.map((item, index) =>
                 item.visible ? (
                     <div
@@ -874,9 +989,8 @@ return (
                             position: "absolute",
                             left: `${item.x}%`,
                             top: `${item.y}%`,
-                            transform: "translate(-50%, -50%)",
-                            resize: "both",
-                            overflow: "auto",
+                            transform: `translate(-50%, -50%) scale(${item.scale}) rotate(${item.rotation}deg)`,
+                            opacity: item.opacity,
                             border:
                                 selectedElement &&
                                     selectedElement.type === "media" &&
@@ -884,8 +998,8 @@ return (
                                     ? "2px solid yellow"
                                     : "1px solid gray",
                         }}
-                        onDoubleClick={() => setSelectedElement({ type: "media", index })}
                         onMouseDown={(e) => onImageMouseDown(e, index)}
+                        onDoubleClick={() => setSelectedElement({ type: "media", index })}
                     >
                         {item.type === "video" ? (
                             <video
@@ -893,14 +1007,22 @@ return (
                                 className="w-64 rounded-md"
                                 controls
                                 loop
+                                autoPlay
                                 muted
                             ></video>
                         ) : (
-                            <img src={item.src} alt={item.type} className="max-w-[300px] max-h-[300px]" />
+                            <img
+                                src={item.src}
+                                alt="Media"
+                                className="max-w-[300px]"
+                                draggable={false}
+                            />
                         )}
                     </div>
                 ) : null
             )}
+
+
 
             {/* Draggable Custom Text Elements */}
             {customTexts.map((ct, index) => (
@@ -929,6 +1051,7 @@ return (
                 >
                     <pre>{ct.text}</pre>
                 </div>
+                
             ))}
 
             {/* Contextual Options Panel */}
@@ -956,6 +1079,20 @@ return (
                 ))}
             </div>
         )}
+        {/* Media Bar */}
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2 bg-gray-900 p-2 rounded-lg z-50">
+            {mediaList.slice(0, 10).map((item, index) => (
+                <div
+                    key={index}
+                    className={`w-8 h-8 rounded border ${item.visible ? "border-green-500 bg-green-600" : "border-red-500 bg-red-600"
+                        } cursor-pointer`}
+                    onClick={() => toggleMediaVisibility(index)}
+                    title={`Toggle Media ${index + 1} (Key: ${index + 1})`}
+                ></div>
+            ))}
+        </div>
+
+
 
         {/* Audio Player */}
         <div className="absolute bottom-0 left-0 z-50 p-2">
