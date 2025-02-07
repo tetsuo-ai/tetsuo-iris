@@ -181,17 +181,18 @@ useEffect(() => {
     const timer = setInterval(() => setCurrentTime(prev => prev + 1), 1000);
     return () => clearInterval(timer);
 }, []);
-useEffect(() => {
-    setMediaList(prev =>
-        prev.map(media => {
-            if (media.isManuallyControlled) return media; // Skip manually controlled items
-            return {
-                ...media,
-                visible: media.showAt <= currentTime && media.hideAt >= currentTime,
-            };
-        })
-    );
-}, [currentTime]);
+    useEffect(() => {
+        setMediaList(prev =>
+            prev.map(media => {
+                if (media.isManuallyControlled) return media; // Skip manually controlled items
+                return {
+                    ...media,
+                    visible: media.showAt <= currentTime && media.hideAt >= currentTime,
+                };
+            })
+        );
+    }, [currentTime]);
+
 
 
 // --- CYBER GLITCH / MATRIX RAIN BACKGROUND ---
@@ -314,6 +315,7 @@ useEffect(() => {
         style.parentNode && style.parentNode.removeChild(style);
     };
 }, [backgroundEnabled]);
+
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
             const keyMap: Record<string, number> = {
@@ -340,6 +342,7 @@ useEffect(() => {
             window.removeEventListener("keydown", handleKeyDown);
         };
     }, []);
+
 
     const toggleMediaVisibility = (index: number) => {
         setMediaList(prev =>
@@ -452,22 +455,45 @@ const onVideoMouseDown = (e: React.MouseEvent) => {
                     event.clientX,
                     event.clientY
                 );
-                setMediaList(prev =>
+                const { x, y } = clampToWorkArea(
+                    start.posX + deltaX,
+                    start.posY + deltaY
+                );
+                setMediaList((prev) =>
                     prev.map((item, i) =>
-                        i === index
-                            ? {
-                                ...item,
-                                x: clamp(start.posX + deltaX, 0, 100),
-                                y: clamp(start.posY + deltaY, 0, 100),
-                            }
-                            : item
+                        i === index ? { ...item, x, y } : item
                     )
                 );
             }
         };
 
         const onMouseUp = () => {
-            document.removeEventListener("mousemove", onMouseMove);
+            document.removeEventListener("mousemove", onMouseMove); {
+                videoPos && isPlaying && (
+                    <div
+                        style={{
+                            position: "absolute",
+                            left: `${videoPos.x}%`,
+                            top: `${videoPos.y}%`,
+                            transform: "translate(-50%, -50%)",
+                            resize: "both",
+                            overflow: "auto",
+                            border: "1px solid gray",
+                        }}
+                        onMouseDown={onVideoMouseDown}
+                    >
+                        <video
+                            id="video-player"
+                            src="https://eaccelerate.me/euroacc/KenSub%20Engage%20_Mental%20Physics_.wav" // Replace with dynamic logic
+                            className="w-96 border border-gray-700 rounded-md"
+                            controls={false}
+                            loop
+                            muted={!isPlaying}
+                        ></video>
+                    </div>
+                )
+            }
+
             document.removeEventListener("mouseup", onMouseUp);
             delete imageDragStarts.current[index];
         };
@@ -475,7 +501,6 @@ const onVideoMouseDown = (e: React.MouseEvent) => {
         document.addEventListener("mousemove", onMouseMove);
         document.addEventListener("mouseup", onMouseUp);
     };
-
 
 
 // Custom text elements dragging
@@ -552,8 +577,9 @@ const onDashboardMouseDown = (e: React.MouseEvent) => {
             let type = "";
             if (mediaUrl.match(/\.(jpeg|jpg|png|gif)$/i)) type = "image";
             else if (mediaUrl.match(/\.(mp4|webm|ogg)$/i)) type = "video";
+
             if (type) {
-                const newMedia = {
+                const newMedia: MediaItem = {
                     type,
                     src: mediaUrl,
                     x: 50,
@@ -565,13 +591,13 @@ const onDashboardMouseDown = (e: React.MouseEvent) => {
                     showAt: 0,
                     hideAt: 120,
                 };
-                const updatedMedia = [...mediaList, newMedia];
-                setMediaList(updatedMedia);
-                localStorage.setItem("mediaList", JSON.stringify(updatedMedia)); // Save to localStorage
-                setMediaUrl("");
+                setMediaList((prev) => [...prev, newMedia]);
+                setMediaUrl(""); // Clear input after adding
             }
         }
     };
+
+
 
     const removeMedia = (index: number) => {
         const updatedMedia = mediaList.filter((_, i) => i !== index);
@@ -622,6 +648,12 @@ const addCustomText = () => {
     setCustomTexts(prev => [...prev, newItem]);
     setCustomTextInput("");
 };
+    const clampToWorkArea = (x: number, y: number): { x: number; y: number } => {
+        return {
+            x: clamp(x, 0, 100), // 0% to 100% within the workspace width
+            y: clamp(y, 0, 100), // 0% to 100% within the workspace height
+        };
+    };
 
     // --- ZOOM FUNCTIONALITY ---
     const handleZoomChange = (delta: number) => {
@@ -954,33 +986,38 @@ return (
                 border: "1px solid white",
                 background: "transparent",
                 transformOrigin: "center",
+                overflow: "hidden", // Clip content that goes outside
             }}
         >
 
             {/* Draggable Video Player (resizable) */}
-            <div
-                style={{
-                    position: "absolute",
-                    left: `${videoPos.x}%`,
-                    top: `${videoPos.y}%`,
-                    transform: "translate(-50%, -50%)",
-                    resize: "both",
-                    overflow: "auto",
-                    border: "1px solid gray",
-                }}
-                onMouseDown={onVideoMouseDown}
-            >
-                <video
-                    id="video-player"
-                    src="https://eaccelerate.me/euroacc/KenSub%20Engage%20_Mental%20Physics_.wav"
-                    className="w-96 border border-gray-700 rounded-md"
-                    controls={false}
-                    loop
-                    muted={!isPlaying}
-                ></video>
-            </div>
+            {videoPos && isPlaying && (
+                <div
+                    style={{
+                        position: "absolute",
+                        left: `${videoPos.x}%`,
+                        top: `${videoPos.y}%`,
+                        transform: "translate(-50%, -50%)",
+                        resize: "both",
+                        overflow: "auto",
+                        border: "1px solid gray",
+                    }}
+                    onMouseDown={onVideoMouseDown}
+                >
+                    <video
+                        id="video-player"
+                        src="https://eaccelerate.me/euroacc/KenSub%20Engage%20_Mental%20Physics_.wav" // Replace with dynamic logic
+                        className="w-96 border border-gray-700 rounded-md"
+                        controls={false}
+                        loop
+                        muted={!isPlaying}
+                    ></video>
+                </div>
+            )}
+
 
             {/* Media Items */}
+            {/* Render Media Items */}
             {mediaList.map((item, index) =>
                 item.visible ? (
                     <div
@@ -991,12 +1028,11 @@ return (
                             top: `${item.y}%`,
                             transform: `translate(-50%, -50%) scale(${item.scale}) rotate(${item.rotation}deg)`,
                             opacity: item.opacity,
-                            border:
-                                selectedElement &&
-                                    selectedElement.type === "media" &&
-                                    selectedElement.index === index
-                                    ? "2px solid yellow"
-                                    : "1px solid gray",
+                            border: selectedElement &&
+                                selectedElement.type === "media" &&
+                                selectedElement.index === index
+                                ? "2px solid yellow"
+                                : "1px solid gray",
                         }}
                         onMouseDown={(e) => onImageMouseDown(e, index)}
                         onDoubleClick={() => setSelectedElement({ type: "media", index })}
@@ -1021,7 +1057,6 @@ return (
                     </div>
                 ) : null
             )}
-
 
 
             {/* Draggable Custom Text Elements */}
@@ -1091,6 +1126,7 @@ return (
                 ></div>
             ))}
         </div>
+
 
 
 
