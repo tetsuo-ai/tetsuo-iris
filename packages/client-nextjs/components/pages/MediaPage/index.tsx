@@ -27,6 +27,11 @@ const mediaPages = [
     href: "/media/kensub",
   },
   {
+    name: "DingDong Editor",
+    description: "Universal multimedia launchpad and canvas.",
+    href: "/media/visuals",
+  },
+  {
     name: "Image API",
     description: "Fetch Logos, Memes, and List Images.",
     href: "/media/image",
