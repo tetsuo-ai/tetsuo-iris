@@ -27,7 +27,7 @@ const mediaPages = [
     href: "/media/kensub",
   },
   {
-    name: "DingDong Editor",
+    name: "Scryer Canvas",
     description: "Universal multimedia launchpad and canvas.",
     href: "/media/visuals",
   },
@@ -35,6 +35,16 @@ const mediaPages = [
     name: "Image API",
     description: "Fetch Logos, Memes, and List Images.",
     href: "/media/image",
+  },
+  {
+    name: "Diablo 1 Game",
+    description: "Play the iconic Diablo 1 game on tetsuo",
+    href: "/media/diablo",
+  },
+  {
+    name: "DOSBox Games",
+    description: "Play nostalgic classic games on tetsuo",
+    href: "/media/dosgames",
   },
 ];
 
