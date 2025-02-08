@@ -36,6 +36,16 @@ const mediaPages = [
     description: "Fetch Logos, Memes, and List Images.",
     href: "/media/image",
   },
+  {
+    name: "Diablo 1 Game",
+    description: "Play the iconic Diablo 1 game on tetsuo",
+    href: "/media/diablo",
+  },
+  {
+    name: "DOSBox Games",
+    description: "Play nostalgic classic games on tetsuo",
+    href: "/media/dosgames",
+  },
 ];
 
 const MediaCard: FC<{ page: typeof mediaPages[number] }> = ({ page }) => (
