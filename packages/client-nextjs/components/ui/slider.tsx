@@ -31,7 +31,15 @@ const Slider = forwardRef<HTMLInputElement, SliderProps>(
                         className
                     )}
                 />
-                <span className="ml-2 text-white">{value[0].toFixed(1)}</span>
+                <input
+                    type="number"
+                    value={value[0]}
+                    min={min}
+                    max={max}
+                    step={step}
+                    onChange={handleChange}
+                    className="w-12 text-center bg-gray-700 text-white p-1 rounded ml-2"
+                />
             </div>
         );
     }

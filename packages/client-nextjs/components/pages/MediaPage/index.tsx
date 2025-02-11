@@ -27,9 +27,9 @@ const mediaPages = [
     href: "/media/kensub",
   },
   {
-    name: "DingDong Editor",
+    name: "Launchpad Scryer",
     description: "Universal multimedia launchpad and canvas.",
-    href: "/media/visuals",
+    href: "/media/scryer",
   },
   {
     name: "Image API",
