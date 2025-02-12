@@ -1,9 +1,9 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
-import type { MediaItem } from "@/components/pages/MediaPage/ScryerPage";
-import type { SelectedElement } from "@/components/pages/MediaPage/ScryerPage";
+import type { MediaItem } from "@/components/pages/MediaPage/SkryrPage";
+import type { SelectedElement } from "@/components/pages/MediaPage/SkryrPage";
 
-interface ScryerToolbarProps {
+interface SkryrToolbarProps {
     isPlaying: boolean;
     handlePlayPause: () => void;
     handleRewind: () => void;
@@ -30,7 +30,7 @@ interface ScryerToolbarProps {
     renderOptionsContent: () => JSX.Element | null;
 }
 
-const ScryerToolbar: React.FC<ScryerToolbarProps> = ({
+const SkryrToolbar: React.FC<SkryrToolbarProps> = ({
     isPlaying,
     handlePlayPause,
     handleRewind,
@@ -59,7 +59,10 @@ const ScryerToolbar: React.FC<ScryerToolbarProps> = ({
     return (
         <div className="flex space-x-4 items-start">
             {/* Main Controls */}
-            <div className="bg-gray-800 p-4 space-y-4 flex flex-col items-center rounded-lg shadow-lg w-[600px]">
+            <div className="bg-gray-800 p-4 space-y-4 flex flex-col items-center rounded-lg shadow-lg w-[600px]"
+                style={{
+                    backgroundColor: "rgba(255, 255, 255, 0.8);"
+                }}>
                 <div className="w-full flex justify-between items-center space-x-2">
                     {/* Group 1: Help, Matrix, ASCII */}
                     <div className="flex space-x-2">
@@ -135,13 +138,18 @@ const ScryerToolbar: React.FC<ScryerToolbarProps> = ({
                 </div>
 
                 {/* Virtual Keyboard Panel */}
-                <div className="w-full flex flex-col justify-center mt-2 space-y-1">
+                <div className="w-full flex flex-col justify-center mt-2 space-y-1"
+                                style={{
+                    backgroundColor: "rgba(255, 255, 255, 0);"}}>
                     {renderVirtualKeyboardPanel()}
                 </div>
             </div>
 
             {/* Media Options Panel */}
-            <div className="w-[300px] bg-gray-800 p-4 space-y-2 flex flex-col items-center rounded-lg shadow-lg">
+            <div className="w-[300px] p-4 space-y-2 flex flex-col items-center rounded-lg shadow-lg"
+                style={{
+                    backgroundColor: "rgba(255, 255, 255, 0.8);"
+                }}>
                 {selectedElement ? (
                     renderOptionsContent()
                 ) : (
@@ -152,4 +160,4 @@ const ScryerToolbar: React.FC<ScryerToolbarProps> = ({
     );
 };
 
-export default ScryerToolbar;
+export default SkryrToolbar;

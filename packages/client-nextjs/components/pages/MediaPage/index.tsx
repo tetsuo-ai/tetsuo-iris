@@ -27,9 +27,9 @@ const mediaPages = [
     href: "/media/kensub",
   },
   {
-    name: "Launchpad Scryer",
+    name: "Launchpad SKRYR",
     description: "Universal multimedia launchpad and canvas.",
-    href: "/media/scryer",
+    href: "/media/skryr",
   },
   {
     name: "Image API",

@@ -4,11 +4,11 @@ import React, { useState, useEffect, useRef, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Slider from "@/components/ui/slider";
-import ScryerToolbar from "@/components/ui/scryer-toolbar";
-import ScryerPalette from "@/components/ui/scryer-palette";
+import SkryrToolbar from "@/components/ui/skryr/skryr-toolbar";
+import SkryrPalette from "@/components/ui/skryr/skryr-palette";
 // Import the preloaded ASCII string (not a component) from your asciis module.
 import AsciiArt from "@/components/ui/asciis";
-
+// import Breadcrumbs from "@/components/Breadcrumbs";
 export interface MediaItem {
     type: "image" | "video" | "audio";
     src: string;
@@ -58,12 +58,12 @@ const fourthRow = ["Z", "X", "C", "V", "B", "N", "M", ",", ".", "/"];
 const numpadRow = ["7", "8", "9", "-", "4", "5", "6", "+", "1", "2", "3", "0", "."];
 
 // Workspace dimensions & helper
-const containerWidth = 800;
-const containerHeight = 450;
+const containerWidth = 960;
+const containerHeight = 480;
 const clamp = (val: number, min: number, max: number) =>
     Math.max(min, Math.min(max, val));
 
-const ScryerPage = () => {
+const SkryrPage = () => {
     // STATE DECLARATIONS
     const [mediaList, setMediaList] = useState<MediaItem[]>([]);
     const [zoomLevel, setZoomLevel] = useState<number>(1);
@@ -349,7 +349,7 @@ const ScryerPage = () => {
                 drops[i]++;
             }
         };
-        const interval = setInterval(draw, 50);
+        const interval = setInterval(draw, 90);
         return () => clearInterval(interval);
     }, [backgroundEnabled, isFullscreen]);
 
@@ -641,7 +641,7 @@ const ScryerPage = () => {
     const renderVirtualKeyboardPanel = (): JSX.Element => {
         let currentIndex = 0;
         return (
-            <div className="p-2 border border-gray-500 bg-gray-800 rounded text-white text-center">
+            <div className="p-2 border border-gray-500 rounded text-white text-center">
                 <div className="mb-2 font-bold">Media Launchpad (drag & drop)</div>
                 {renderKeyboardRow(topRow, currentIndex)}
                 {(() => {
@@ -772,7 +772,8 @@ const ScryerPage = () => {
                 <div className="flex flex-col gap-1 max-h-screen overflow-auto">
                     <div className="text-lg font-bold mb-2">ASCII/Text Options</div>
                     {ct.isAscii ? (
-                        <textarea value={ct.text || ""} onChange={(e) => setCustomTexts((prev) => prev.map((item, i) => i === selectedElement.index ? { ...item, text: e.target.value } : item))} className="w-full h-48 bg-gray-800 text-white p-2 whitespace-pre-wrap" />
+                        <textarea value={ct.text || ""} onChange={(e) => setCustomTexts((prev) => prev.map((item, i) => i === selectedElement.index ? { ...item, text: e.target.value } : item))} className="w-full h-48 bg-gray-
+                         text-white p-2 whitespace-pre-wrap" />
                     ) : (
                         <Input type="text" placeholder="Edit Text" value={ct.text || ""} onChange={(e) => setCustomTexts((prev) => prev.map((item, i) => i === selectedElement.index ? { ...item, text: e.target.value } : item))} />
                     )}
@@ -790,9 +791,11 @@ const ScryerPage = () => {
     // ---------------------
     return (
         // Wrap palette and workspace in a container so that full screen includes both.
-        <div id="fullscreenContainer" className="relative w-full min-h-screen bg-black text-white overflow-hidden">
+        <div id="fullscreenContainer" className="relative w-full bg-black text-white overflow-hidden"
+        style={{background: `url(https://eaccelerate.me/tetsuo/skryr-bg.png)`}}>
+
             {/* Palette (with drag-handle) */}
-            <ScryerPalette
+            <SkryrPalette
                 isFullscreen={isFullscreen}
                 handleToggleFullscreen={handleToggleFullscreen}
                 showPalette={showPalette}
@@ -804,7 +807,7 @@ const ScryerPage = () => {
                 embeddedMode={embeddedMode}
                 setEmbeddedMode={setEmbeddedMode}
             >
-                <ScryerToolbar
+                <SkryrToolbar
                     isPlaying={isPlaying}
                     handlePlayPause={handlePlayPause}
                     handleRewind={handleRewind}
@@ -830,14 +833,14 @@ const ScryerPage = () => {
                     selectedElement={selectedElement}
                     renderOptionsContent={/* Pass your renderOptionsContent function here */ renderOptionsContent}
                 />
-            </ScryerPalette>
-
+            </SkryrPalette>
+            {/* <Breadcrumbs></Breadcrumbs> */}
             {/* Workspace */}
             <div
                 id="workspace"
                 style={{
                     position: "relative",
-                    margin: "60px auto 0 auto",
+                    margin: "0px auto 0 auto",
                     transform: `scale(${zoomLevel})`,
                     width: `${workspaceDimensions.width}px`,
                     height: `${workspaceDimensions.height}px`,
@@ -894,7 +897,6 @@ const ScryerPage = () => {
                                         id="video-player"
                                         src={item.src}
                                         className="w-64 border border-gray-700 rounded-md"
-                                        controls
                                         loop
                                         autoPlay
                                         muted
@@ -911,4 +913,4 @@ const ScryerPage = () => {
     );
 };
 
-export default ScryerPage;
+export default SkryrPage;

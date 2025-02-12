@@ -1,8 +1,8 @@
-// components/ui/scryer-palette.tsx
+
 import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 
-interface ScryerPaletteProps {
+interface SkryrPaletteProps {
     isFullscreen: boolean;
     handleToggleFullscreen: () => void;
     showPalette: boolean;
@@ -16,7 +16,7 @@ interface ScryerPaletteProps {
     children: React.ReactNode;
 }
 
-const ScryerPalette: React.FC<ScryerPaletteProps> = ({
+const SkryrPalette: React.FC<SkryrPaletteProps> = ({
     isFullscreen,
     handleToggleFullscreen,
     showPalette,
@@ -139,18 +139,22 @@ const ScryerPalette: React.FC<ScryerPaletteProps> = ({
             ref={paletteRef}
             className="fixed z-[100] bg-gray-900 rounded-lg shadow-lg"
             style={{
-                left: `${position.x}px`,
-                top: `${position.y}px`,
+                left: "50%",
+                bottom: "0px",
+                transform: "translateX(-50%)",
                 display: showPalette ? "block" : "none",
                 cursor: "default",
+                background: "url(https://eaccelerate.me/tetsuo/skryr-palette-logo.png) no-repeat center/cover",
             }}
         >
             {/* Drag Handle */}
             <div
-                className="flex items-center bg-gray-700 px-2 py-1 cursor-move select-none"
+                className="flex items-center px-2 py-1 cursor-move select-none"
+                style={{
+                    backgroundColor: "rgba(255, 255, 255, 0);"}}
                 onMouseDown={handleDragHandleMouseDown}
             >
-                <span className="text-lg">☰ Palette</span>
+                <span className="text-lg bold">☰ Launchpad SKRYR </span>
             </div>
             {/* Palette Content */}
             <div className="p-4">{children}</div>
@@ -158,4 +162,4 @@ const ScryerPalette: React.FC<ScryerPaletteProps> = ({
     );
 };
 
-export default ScryerPalette;
+export default SkryrPalette;

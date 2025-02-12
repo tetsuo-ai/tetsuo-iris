@@ -1,13 +1,16 @@
 import React from "react";
 
-interface ScryerOptionsProps {
+interface SkryrOptionsProps {
     selectedElement: { type: "media" | "customText"; index: number } | null;
     renderOptionsContent: () => JSX.Element | null;
 }
 
-const ScryerOptions: React.FC<ScryerOptionsProps> = ({ selectedElement, renderOptionsContent }) => {
+const SkryrOptions: React.FC<SkryrOptionsProps> = ({ selectedElement, renderOptionsContent }) => {
     return (
-        <div className="bg-gray-800 p-4 space-y-2 flex flex-col items-center rounded-lg shadow-lg w-[300px]">
+        <div className="p-4 space-y-2 flex flex-col items-center rounded-lg shadow-lg w-[300px]"
+            style={{
+                backgroundColor: "rgba(255, 255, 255, 0.8);"
+            }}>
             {selectedElement ? (
                 renderOptionsContent()
             ) : (
@@ -17,4 +20,4 @@ const ScryerOptions: React.FC<ScryerOptionsProps> = ({ selectedElement, renderOp
     );
 };
 
-export default ScryerOptions;
+export default SkryrOptions;
