@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { TradingViewChart } from "@/components/TradingViewChart";
 import { WhalesTransactions } from "@/components/WhalesTransactions";
 import JupiterAPIInteraction from "@/components/JupiterAPIInteraction";
+import "@jup-ag/terminal/css";
+import { useWallet } from "@solana/wallet-adapter-react";
 
 export default function FinancePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -29,6 +31,27 @@ export default function FinancePage() {
   const handleTabClick = (tab: string) => {
     setActiveTab(tab);
   };
+
+  const walletProps = useWallet();
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      import("@jup-ag/terminal").then((mod) => {
+        const init = mod.init;
+
+        init({
+          displayMode: "integrated",
+          integratedTargetId: "jupiter-integrated-terminal",
+          endpoint: "https://api.mainnet-beta.solana.com",
+          refetchIntervalForTokenAccounts: 10000,
+          defaultExplorer: "Solscan",
+          formProps: {
+            initialSlippageBps: 0,
+          },
+        });
+      });
+    }
+  }, []);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -57,6 +80,7 @@ export default function FinancePage() {
         {/* Right side: Whale Transactions */}
         <div className="w-1/4 flex flex-col">
           <div className="h-full overflow-auto">
+            <div id="jupiter-integrated-terminal" className="bg-zinc-800" />
             <WhalesTransactions />
           </div>
 
