@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { TradingViewChart } from "@/components/TradingViewChart";
 import { WhalesTransactions } from "@/components/WhalesTransactions";
 import JupiterAPIInteraction from "@/components/JupiterAPIInteraction";
+import { JupiterTerminal } from "@/components/JupiterTerminal";
 
 export default function FinancePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -47,24 +48,27 @@ export default function FinancePage() {
   }, [isModalOpen]);
 
   return (
-    <main className="p-4 flex-1">
-      <div className="flex flex-row gap-4">
-        {/* Left side: TradingView Chart */}
-        <div id="tradingview_widget" className="w-3/4">
-          <TradingViewChart />
+    <main className="flex-1">
+      <div className="flex flex-row gap-2">
+        <div className="grow">
+          <div id="tradingview_widget">
+            <TradingViewChart />
+          </div>
+          <div className="h-[500px] overflow-auto">
+            <WhalesTransactions />
+          </div>
         </div>
 
-        {/* Right side: Whale Transactions */}
-        <div className="w-1/4 flex flex-col">
-          <div className="h-full overflow-auto">
-            <WhalesTransactions />
+        <div className="flex flex-col">
+          <div className="h-fit overflow-auto">
+            <JupiterTerminal />
           </div>
 
           {/* Jupiter Buttons - Aligned in a Single Line */}
           <div className="flex flex-row space-x-2 mt-4 justify-center">
             <button
               onClick={openModal}
-              className="bg-blue-500 text-white px-4 w-full mx-2 py-2 rounded-md hover:bg-blue-600"
+              className="bg-blue-500 text-white px-4 w-full py-2 rounded-md hover:bg-blue-600"
             >
               Open Jupiter
             </button>
