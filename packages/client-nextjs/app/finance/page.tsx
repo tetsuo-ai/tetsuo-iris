@@ -4,10 +4,7 @@ import { useState, useEffect } from "react";
 import { TradingViewChart } from "@/components/TradingViewChart";
 import { WhalesTransactions } from "@/components/WhalesTransactions";
 import JupiterAPIInteraction from "@/components/JupiterAPIInteraction";
-
-import { init, syncProps } from "@jup-ag/terminal";
-import { useWallet } from "@solana/wallet-adapter-react";
-import "@jup-ag/terminal/css";
+import { JupiterTerminal } from "@/components/JupiterTerminal";
 
 export default function FinancePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -33,26 +30,6 @@ export default function FinancePage() {
   const handleTabClick = (tab: string) => {
     setActiveTab(tab);
   };
-
-  const walletContextState = useWallet();
-
-  useEffect(() => {
-    init({
-      displayMode: "integrated",
-      integratedTargetId: "jupiter-integrated-terminal",
-      endpoint: "https://api.mainnet-beta.solana.com",
-      refetchIntervalForTokenAccounts: 10000,
-      defaultExplorer: "Solscan",
-      formProps: {
-        initialSlippageBps: 0,
-      },
-    });
-  }, []);
-
-  // Make sure passthrough wallet are synced
-  useEffect(() => {
-    syncProps({ passthroughWalletContextState: walletContextState });
-  }, [walletContextState]);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -84,7 +61,7 @@ export default function FinancePage() {
 
         <div className="flex flex-col">
           <div className="h-fit overflow-auto">
-            <div id="jupiter-integrated-terminal" className="bg-zinc-800 h-[568px] w-[350px]" />
+            <JupiterTerminal />
           </div>
 
           {/* Jupiter Buttons - Aligned in a Single Line */}
