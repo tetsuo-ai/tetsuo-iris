@@ -39,8 +39,8 @@ export const WhalesTransactions = () => {
   }
 
   return (
-    <ScrollArea className="max-w-lg mx-auto h-[500px]">
-      <Table aria-label="Whales Transactions Table" className="max-w-lg mx-auto">
+    <ScrollArea className="w-full">
+      <Table aria-label="Whales Transactions Table" className="w-full">
         <TableCaption>Whales Transactions</TableCaption>
         <TableHeader>
           <TableRow>

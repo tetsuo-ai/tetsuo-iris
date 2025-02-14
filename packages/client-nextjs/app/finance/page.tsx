@@ -4,8 +4,10 @@ import { useState, useEffect } from "react";
 import { TradingViewChart } from "@/components/TradingViewChart";
 import { WhalesTransactions } from "@/components/WhalesTransactions";
 import JupiterAPIInteraction from "@/components/JupiterAPIInteraction";
-import "@jup-ag/terminal/css";
+
+import { init, syncProps } from "@jup-ag/terminal";
 import { useWallet } from "@solana/wallet-adapter-react";
+import "@jup-ag/terminal/css";
 
 export default function FinancePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -32,26 +34,25 @@ export default function FinancePage() {
     setActiveTab(tab);
   };
 
-  const walletProps = useWallet();
+  const walletContextState = useWallet();
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      import("@jup-ag/terminal").then((mod) => {
-        const init = mod.init;
-
-        init({
-          displayMode: "integrated",
-          integratedTargetId: "jupiter-integrated-terminal",
-          endpoint: "https://api.mainnet-beta.solana.com",
-          refetchIntervalForTokenAccounts: 10000,
-          defaultExplorer: "Solscan",
-          formProps: {
-            initialSlippageBps: 0,
-          },
-        });
-      });
-    }
+    init({
+      displayMode: "integrated",
+      integratedTargetId: "jupiter-integrated-terminal",
+      endpoint: "https://api.mainnet-beta.solana.com",
+      refetchIntervalForTokenAccounts: 10000,
+      defaultExplorer: "Solscan",
+      formProps: {
+        initialSlippageBps: 0,
+      },
+    });
   }, []);
+
+  // Make sure passthrough wallet are synced
+  useEffect(() => {
+    syncProps({ passthroughWalletContextState: walletContextState });
+  }, [walletContextState]);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -70,25 +71,27 @@ export default function FinancePage() {
   }, [isModalOpen]);
 
   return (
-    <main className="p-4 flex-1">
-      <div className="flex flex-row gap-4">
-        {/* Left side: TradingView Chart */}
-        <div id="tradingview_widget" className="w-3/4">
-          <TradingViewChart />
+    <main className="flex-1">
+      <div className="flex flex-row gap-2">
+        <div className="grow">
+          <div id="tradingview_widget">
+            <TradingViewChart />
+          </div>
+          <div className="h-[500px] overflow-auto">
+            <WhalesTransactions />
+          </div>
         </div>
 
-        {/* Right side: Whale Transactions */}
-        <div className="w-1/4 flex flex-col">
-          <div className="h-full overflow-auto">
-            <div id="jupiter-integrated-terminal" className="bg-zinc-800" />
-            <WhalesTransactions />
+        <div className="flex flex-col">
+          <div className="h-fit overflow-auto">
+            <div id="jupiter-integrated-terminal" className="bg-zinc-800 h-[568px] w-[350px]" />
           </div>
 
           {/* Jupiter Buttons - Aligned in a Single Line */}
           <div className="flex flex-row space-x-2 mt-4 justify-center">
             <button
               onClick={openModal}
-              className="bg-blue-500 text-white px-4 w-full mx-2 py-2 rounded-md hover:bg-blue-600"
+              className="bg-blue-500 text-white px-4 w-full py-2 rounded-md hover:bg-blue-600"
             >
               Open Jupiter
             </button>
