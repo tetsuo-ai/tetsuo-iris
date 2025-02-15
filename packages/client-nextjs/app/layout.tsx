@@ -1,23 +1,28 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
-import "./globals.css";
-import { Layout } from "@/components/Layout";
 import { ClientProviders } from "@/components/providers/ClientProviders";
 
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  weight: "100 900",
-});
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
-  weight: "100 900",
+import { Orbitron, JetBrains_Mono, Inter } from "next/font/google";
+
+const orbitron = Orbitron({
+  subsets: ["latin"],
+  display: "swap",
 });
 
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  display: "swap",
+});
+
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+});
+
+import "./global.css";
+
 export const metadata: Metadata = {
-  title: "Tetsuo",
-  description: "Tetsuo",
+  title: "TETSUO Iris",
+  description: "Your second set of eyes in the digital realm",
 };
 
 export default function RootLayout({
@@ -27,11 +32,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`antialiased ${orbitron.className} ${jetbrainsMono.className} ${inter.className} inter-400`}>
         <ClientProviders>
-          <Layout>{children}</Layout>
+          {children}
         </ClientProviders>
       </body>
     </html>

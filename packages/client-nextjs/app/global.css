@@ -1,0 +1,76 @@
+/* Orbitron */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap');
+/* Inter */
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+/* JetBrains Mono */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  .orbitron-400,
+  .orbitron-500,
+  .orbitron-600,
+  .orbitron-700,
+  .orbitron-800,
+  .orbitron-900 {
+    font-family: 'Orbitron', serif;
+    font-optical-sizing: auto;
+    font-style: normal;
+  }
+
+  .orbitron-400 { font-weight: 400; }
+  .orbitron-500 { font-weight: 500; }
+  .orbitron-600 { font-weight: 600; }
+  .orbitron-700 { font-weight: 700; }
+  .orbitron-800 { font-weight: 800; }
+  .orbitron-900 { font-weight: 900; }
+
+  .inter-100,
+  .inter-200,
+  .inter-300,
+  .inter-400,
+  .inter-500,
+  .inter-600,
+  .inter-700,
+  .inter-800,
+  .inter-900 {
+    font-family: 'Inter', serif;
+    font-optical-sizing: auto;
+    font-style: normal;
+  }
+
+  .inter-100 { font-weight: 100; }
+  .inter-200 { font-weight: 200; }
+  .inter-300 { font-weight: 300; }
+  .inter-400 { font-weight: 400; }
+  .inter-500 { font-weight: 500; }
+  .inter-600 { font-weight: 600; }
+  .inter-700 { font-weight: 700; }
+  .inter-800 { font-weight: 800; }
+  .inter-900 { font-weight: 900; }
+
+  .jetbrains-mono-100,
+  .jetbrains-mono-200,
+  .jetbrains-mono-300,
+  .jetbrains-mono-400,
+  .jetbrains-mono-500,
+  .jetbrains-mono-600,
+  .jetbrains-mono-700,
+  .jetbrains-mono-800 {
+    font-family: 'JetBrains Mono', serif;
+    font-optical-sizing: auto;
+    font-style: normal;
+  }
+
+  .jetbrains-mono-100 { font-weight: 100; }
+  .jetbrains-mono-200 { font-weight: 200; }
+  .jetbrains-mono-300 { font-weight: 300; }
+  .jetbrains-mono-400 { font-weight: 400; }
+  .jetbrains-mono-500 { font-weight: 500; }
+  .jetbrains-mono-600 { font-weight: 600; }
+  .jetbrains-mono-700 { font-weight: 700; }
+  .jetbrains-mono-800 { font-weight: 800; }
+}

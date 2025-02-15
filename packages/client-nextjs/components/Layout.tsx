@@ -50,39 +50,40 @@ export const Layout: FC<{ children: ReactNode }> = ({ children }) => {
   const [provider, setProvider] = useState<"Jupiter" | "Raydium">("Raydium");
   const [estimatedTetsuo, setEstimatedTetsuo] = useState({ tokens: "N/A", usd: "N/A" });
   const [estimatedSwap, setEstimatedSwap] = useState({ tokens: "N/A", usd: "N/A" });
-const fetchPrices = async () => {
+
+  const fetchPrices = async () => {
     try {
-        const priceRes = await fetch(JUPITER_PRICE_API, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ contractAddresses: [TETSUO_CONTRACT, swapFromContract, SOL_CONTRACT] }),
-        });
+      const priceRes = await fetch(JUPITER_PRICE_API, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contractAddresses: [TETSUO_CONTRACT, swapFromContract, SOL_CONTRACT] }),
+      });
 
-        const balanceRes = await fetch(JUPITER_BALANCE_API, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ wallet: publicKey?.toString() }),
-        });
+      const balanceRes = await fetch(JUPITER_BALANCE_API, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ wallet: publicKey?.toString() }),
+      });
 
-        const priceData = await priceRes.json();
-        const balanceData = await balanceRes.json();
+      const priceData = await priceRes.json();
+      const balanceData = await balanceRes.json();
 
-        console.log("[API RESPONSE] Prices:", priceData);
-        console.log("[API RESPONSE] Balance:", balanceData);
+      console.log("[API RESPONSE] Prices:", priceData);
+      console.log("[API RESPONSE] Balance:", balanceData);
 
-        setPriceData(priceData);
-        setBalance(balanceData?.balance || "0");
-        setValidContract(!!priceData[swapFromContract]);
+      setPriceData(priceData);
+      setBalance(balanceData?.balance || "0");
+      setValidContract(!!priceData[swapFromContract]);
     } catch (error) {
-        console.error("Error fetching data:", error);
+      console.error("Error fetching data:", error);
     }
-};
+  };
 
-useEffect(() => {
+  useEffect(() => {
     if (publicKey) {
         fetchPrices();
     }
-}, [publicKey, swapFromContract, provider]);
+  }, [publicKey, swapFromContract, provider]);
 
   useEffect(() => {
     const fetchBuyEstimate = async () => {
@@ -128,26 +129,28 @@ useEffect(() => {
     fetchBuyEstimate();
   }, [buyAmount, provider, priceData]);
 
- const [tokenDecimals, setTokenDecimals] = useState<{ [key: string]: number }>({});
+  const [tokenDecimals, setTokenDecimals] = useState<{ [key: string]: number }>({});
 
-// Fetch token decimals from Raydium API or Solana RPC
-const fetchTokenDecimals = async () => {
-  try {
-    const res = await fetch("https://api.raydium.io/v2/sdk/tokenList");
-    const data = await res.json();
-    const decimalsMap = data.reduce((acc: { [x: string]: any; }, token: { mint: string | number; decimals: any; }) => {
-      acc[token.mint] = token.decimals;
-      return acc;
-    }, {});
-    setTokenDecimals(decimalsMap);
-  } catch (error) {
-    console.error("Failed to fetch token decimals:", error);
-  }
-};
+  // Fetch token decimals from Raydium API or Solana RPC
+  const fetchTokenDecimals = async () => {
+    try {
+      const res = await fetch("https://api.raydium.io/v2/sdk/tokenList");
+      const data = await res.json();
+      // TODO: this shit is broken
+      const decimalsMap = data.reduce((acc: { [x: string]: any; }, token: { mint: string | number; decimals: any; }) => {
+        acc[token.mint] = token.decimals;
+        return acc;
+      }, {});
+      setTokenDecimals(decimalsMap);
+    } catch (error) {
+      console.error("Failed to fetch token decimals:", error);
+    }
+  };
 
-useEffect(() => {
-  fetchTokenDecimals();
-}, []);
+  useEffect(() => {
+    fetchTokenDecimals();
+  }, []);
+
   const SOL_DECIMALS = 9;
   const TETSUO_DECIMALS = 6;
 
@@ -242,6 +245,7 @@ useEffect(() => {
 
     fetchSwapEstimate();
   }, [swapAmount, swapFromContract, provider, priceData]);
+
   const [isUpdating, setIsUpdating] = useState(false);
   const [countdown, setCountdown] = useState(900); // 15 minutes = 900 seconds
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
@@ -285,6 +289,7 @@ useEffect(() => {
       if (countdownRef.current) clearInterval(countdownRef.current);
     };
   }, []);
+
   return (
     <div className="min-h-screen flex flex-col pb-20">
       <header className="flex justify-between items-center p-4">
@@ -292,7 +297,7 @@ useEffect(() => {
           <img src={Logo.src} alt="Tetsuo Logo" className="w-14" />
         </Link>
         <div className="flex items-center gap-2">
-          <ThemeDropdown />
+          {/*<ThemeDropdown />*/}
           <WalletMultiButton />
         </div>
       </header>
@@ -314,7 +319,6 @@ useEffect(() => {
       )}
 
       <main className="p-4 flex-1">{children}</main>
-
 
       {/* Buy Modal */}
       <Dialog open={buyOpen} onOpenChange={setBuyOpen}>
