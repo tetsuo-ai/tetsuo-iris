@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { CheckCircle, MessageCircle, Wallet, XCircle, Wrench, PlayIcon } from "lucide-react";
 import Link from "next/link";
 import Logo from "@/app/images/logo.webp";
-import { ThemeDropdown } from "./ThemeDropdown";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePathname } from "next/navigation";
 
@@ -291,13 +290,12 @@ export const Layout: FC<{ children: ReactNode }> = ({ children }) => {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col pb-20">
+    <div className="min-h-screen flex flex-col">
       <header className="flex justify-between items-center p-4">
-        <Link href="/finance">
+        <Link href="/">
           <img src={Logo.src} alt="Tetsuo Logo" className="w-14" />
         </Link>
         <div className="flex items-center gap-2">
-          {/*<ThemeDropdown />*/}
           <WalletMultiButton />
         </div>
       </header>
@@ -318,7 +316,7 @@ export const Layout: FC<{ children: ReactNode }> = ({ children }) => {
         </div>
       )}
 
-      <main className="p-4 flex-1">{children}</main>
+      {children}
 
       {/* Buy Modal */}
       <Dialog open={buyOpen} onOpenChange={setBuyOpen}>

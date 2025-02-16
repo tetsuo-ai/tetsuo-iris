@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ClientProviders } from "@/components/providers/ClientProviders";
+import { Layout } from "@/components/Layout";
 
 import { Orbitron, JetBrains_Mono, Inter } from "next/font/google";
 

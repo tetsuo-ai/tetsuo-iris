@@ -6,7 +6,7 @@ export default function NotFound() {
       <h2 className="text-2xl font-bold mb-4">404 - Page Not Found</h2>
       <p className="mb-4">Could not find the requested resource</p>
       <Link
-        href="/finance"
+        href="/"
         className="text-blue-500 hover:text-blue-700 underline"
       >
         Return Home

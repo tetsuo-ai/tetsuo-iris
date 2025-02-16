@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { TradingViewChart } from "@/components/TradingViewChart";
+import TradingViewWidget from "@/components/TradingViewWidget";
 import { WhalesTransactions } from "@/components/WhalesTransactions";
 import JupiterAPIInteraction from "@/components/JupiterAPIInteraction";
 import { JupiterTerminal } from "@/components/JupiterTerminal";
+import Navbar from "@/components/Navbar";
 
 export default function FinancePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -48,30 +49,33 @@ export default function FinancePage() {
   }, [isModalOpen]);
 
   return (
-    <main className="flex-1">
-      <div className="flex flex-row gap-2">
-        <div className="grow">
-          <div id="tradingview_widget">
-            <TradingViewChart />
-          </div>
-          <div className="h-[500px] overflow-auto">
-            <WhalesTransactions />
-          </div>
-        </div>
-
-        <div className="flex flex-col">
-          <div className="h-fit overflow-auto">
-            <JupiterTerminal />
+    <main className="bg-zinc-950">
+      <div className="p-4 h-screen flex flex-col gap-4 overflow-hidden">
+        <Navbar />
+        <div className="grow flex gap-4">
+          <div className="grow flex flex-col gap-4">
+            <div className="h-full w-full">
+              <TradingViewWidget />
+            </div>
+            <div className="h-[30rem] overflow-auto rounded">
+              <WhalesTransactions />
+            </div>
           </div>
 
-          {/* Jupiter Buttons - Aligned in a Single Line */}
-          <div className="flex flex-row space-x-2 mt-4 justify-center">
-            <button
-              onClick={openModal}
-              className="bg-blue-500 text-white px-4 w-full py-2 rounded-md hover:bg-blue-600"
-            >
-              Open Jupiter
-            </button>
+          <div className="flex flex-col">
+            <div className="bg-zinc-900 h-full w-[350px] rounded overflow-auto">
+              <JupiterTerminal />
+            </div>
+
+            {/* Jupiter Buttons - Aligned in a Single Line */}
+            <div className="flex flex-row space-x-2 mt-4 justify-center">
+              <button
+                onClick={openModal}
+                className="bg-blue-500 text-white px-4 w-full py-2 rounded-md hover:bg-blue-600"
+              >
+                Open Jupiter
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -79,33 +83,34 @@ export default function FinancePage() {
       {/* Modal */}
       {isModalOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-zinc-950/25 backdrop-blur flex items-center justify-center z-50"
           onClick={closeModal}
         >
           <div
-            className="bg-white rounded-md shadow-lg w-3/4 max-w-3xl h-[500px] flex flex-col"
+            className="bg-zinc-900 rounded shadow-lg w-3/4 max-w-3xl h-[500px] flex flex-col"
             onClick={(e) => e.stopPropagation()} // Prevent click from closing modal
           >
-            <div className="p-4 flex justify-between items-center border-b">
-              <h2 className="text-lg font-bold">Jupiter API Endpoints</h2>
+            <div className="p-4 flex justify-between place-items-center">
+              <h2 className="text-zinc-200 text-xl orbitron-700">Jupiter API Endpoints</h2>
               <button
                 onClick={closeModal}
-                className="text-gray-500 hover:text-gray-700 text-2xl"
+                className="text-red-500 hover:text-red-600 text-3xl px-2"
               >
                 &times;
               </button>
             </div>
 
             {/* Tabs */}
-            <div className="flex border-b">
+            <div className="flex">
               {endpoints.map((endpoint) => (
                 <button
                   key={endpoint.value}
                   onClick={() => handleTabClick(endpoint.value)}
-                  className={`p-4 flex-1 text-center border-r ${activeTab === endpoint.value
-                      ? "bg-blue-500 text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
+                  className={`p-4 flex-1 text-center orbitron-500
+                    ${activeTab === endpoint.value
+                      ? "bg-gradient-to-br from-cyan-500 to-emerald-600 text-zinc-200"
+                      : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+                  }`}
                 >
                   {endpoint.name}
                 </button>
@@ -113,7 +118,7 @@ export default function FinancePage() {
             </div>
 
             {/* Tab Content */}
-            <div className="p-4 flex-1 overflow-y-auto">
+            <div className="p-4 overflow-y-auto">
               {endpoints.map(
                 (endpoint) =>
                   activeTab === endpoint.value && (

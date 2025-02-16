@@ -27,5 +27,5 @@ export function JupiterTerminal() {
     syncProps({ passthroughWalletContextState: walletContextState });
   }, [walletContextState]);
 
-  return <div id="jupiter-terminal" className="bg-zinc-800 h-[568px] w-[350px]"></div>
+  return <div id="jupiter-terminal" className="h-full w-full"></div>
 }
