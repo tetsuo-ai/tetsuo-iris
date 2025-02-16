@@ -1,114 +1,119 @@
 "use client";
 
 import React, { useState } from "react";
-import Breadcrumbs from "@/components/Breadcrumbs";
+import Navbar from "@/components/Navbar";
+
 const ImagePage = () => {
-    const [logoUrl, setLogoUrl] = useState<string | null>(null);
-    const [memeUrl, setMemeUrl] = useState<string | null>(null);
-    const [imageList, setImageList] = useState<string[]>([]);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [memeUrl, setMemeUrl] = useState<string | null>(null);
+  const [imageList, setImageList] = useState<string[]>([]);
 
-    const fetchLogo = async () => {
-        try {
-            const response = await fetch("/api/v1/image/logo");
-            if (response.ok && response.headers.get("Content-Type")?.includes("image/webp")) {
-                const blob = await response.blob();
-                const url = URL.createObjectURL(blob);
-                setLogoUrl(url);
-            } else {
-                console.error("Unexpected response format:", await response.text());
-            }
-        } catch (error) {
-            console.error("Error fetching logo:", error);
+  const fetchLogo = async () => {
+    try {
+      const response = await fetch("/api/v1/image/logo");
+      if (response.ok && response.headers.get("Content-Type")?.includes("image/webp")) {
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        setLogoUrl(url);
+      } else {
+        console.error("Unexpected response format:", await response.text());
+      }
+    } catch (error) {
+      console.error("Error fetching logo:", error);
+    }
+  };
+
+  const fetchMeme = async () => {
+    try {
+      const response = await fetch("/api/v1/image/meme");
+      if (response.ok && response.headers.get("Content-Type")?.includes("image/webp")) {
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        setMemeUrl(url);
+      } else {
+        console.error("Unexpected response format:", await response.text());
+      }
+    } catch (error) {
+      console.error("Error fetching meme:", error);
+    }
+  };
+
+  const fetchImageList = async () => {
+    try {
+      const response = await fetch("/api/v1/image/list");
+      if (response.ok && response.headers.get("Content-Type")?.includes("application/json")) {
+        const data = await response.json();
+        if (data.images && Array.isArray(data.images)) {
+          setImageList(data.images);
+        } else {
+          console.error("Unexpected image list format:", data);
         }
-    };
+      } else {
+        console.error("Unexpected response format:", await response.text());
+      }
+    } catch (error) {
+      console.error("Error fetching image list:", error);
+    }
+  };
 
-    const fetchMeme = async () => {
-        try {
-            const response = await fetch("/api/v1/image/meme");
-            if (response.ok && response.headers.get("Content-Type")?.includes("image/webp")) {
-                const blob = await response.blob();
-                const url = URL.createObjectURL(blob);
-                setMemeUrl(url);
-            } else {
-                console.error("Unexpected response format:", await response.text());
-            }
-        } catch (error) {
-            console.error("Error fetching meme:", error);
-        }
-    };
+  return (
+    <main className="bg-zinc-950">
+      <div className="p-4 h-screen flex flex-col gap-4 overflow-hidden">
+        <Navbar />
+        <div className="max-w-screen-lg mx-auto w-full">
+          <h1 className="text-5xl orbitron-500 text-zinc-50">
+            Image API Demo
+          </h1>
 
-    const fetchImageList = async () => {
-        try {
-            const response = await fetch("/api/v1/image/list");
-            if (response.ok && response.headers.get("Content-Type")?.includes("application/json")) {
-                const data = await response.json();
-                if (data.images && Array.isArray(data.images)) {
-                    setImageList(data.images);
-                } else {
-                    console.error("Unexpected image list format:", data);
-                }
-            } else {
-                console.error("Unexpected response format:", await response.text());
-            }
-        } catch (error) {
-            console.error("Error fetching image list:", error);
-        }
-    };
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Get Logo */}
+            <section className="p-4 rounded bg-zinc-900 shadow-sm space-y-4">
+              <h2 className="text-xl orbitron-500 text-zinc-200">Get Logo</h2>
+              <button
+                onClick={fetchLogo}
+                className="rounded bg-green-800 hover:bg-green-700 text-zinc-200 px-8 py-2 orbitron-500"
+              >
+                Fetch
+              </button>
+              {logoUrl && <img src={logoUrl} alt="Logo" className="max-w-full h-auto rounded" />}
+            </section>
 
-    return (
-        <div className="p-6 max-w-6xl mx-auto">
-            {/* Page Title */}
-            <Breadcrumbs /> {/* Breadcrumb Navigation */}
-            <h1 className="text-3xl font-bold mb-6">Image API Demonstration</h1>
+            {/* Get Meme */}
+            <section className="p-4 rounded bg-zinc-900 shadow-sm space-y-4">
+              <h2 className="text-xl orbitron-500 text-zinc-200">Get Meme</h2>
+              <button
+                onClick={fetchMeme}
+                className="rounded bg-green-800 hover:bg-green-700 text-zinc-200 px-8 py-2 orbitron-500"
+              >
+                Fetch
+              </button>
+              {memeUrl && <img src={memeUrl} alt="Meme" className="max-w-full h-auto rounded" />}
+            </section>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Get Logo */}
-                <section className="border p-4 rounded-md bg-gray-50 shadow-sm space-y-2">
-                    <h2 className="text-xl font-semibold">Get Logo</h2>
-                    <button
-                        onClick={fetchLogo}
-                        className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
-                    >
-                        Fetch
-                    </button>
-                    {logoUrl && <img src={logoUrl} alt="Logo" className="max-w-full h-auto border rounded-md" />}
-                </section>
-
-                {/* Get Meme */}
-                <section className="border p-4 rounded-md bg-gray-50 shadow-sm space-y-2">
-                    <h2 className="text-xl font-semibold">Get Meme</h2>
-                    <button
-                        onClick={fetchMeme}
-                        className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
-                    >
-                        Fetch
-                    </button>
-                    {memeUrl && <img src={memeUrl} alt="Meme" className="max-w-full h-auto border rounded-md" />}
-                </section>
-
-                {/* List Images */}
-                <section className="border p-4 rounded-md bg-gray-50 shadow-sm space-y-2">
-                    <h2 className="text-xl font-semibold">List Images</h2>
-                    <button
-                        onClick={fetchImageList}
-                        className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
-                    >
-                        Fetch
-                    </button>
-                    {imageList.length > 0 && (
-                        <ul className="bg-gray-100 p-4 rounded-md text-sm space-y-2">
-                            {imageList.map((image, index) => (
-                                <li key={index} className="flex items-center gap-2">
-                                    <span className="text-gray-700">{image}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                </section>
-
-            </div>
+            {/* List Images */}
+            <section className="p-4 rounded bg-zinc-900 shadow-sm space-y-4">
+              <h2 className="text-xl orbitron-500 text-zinc-200">List Images</h2>
+              <button
+                onClick={fetchImageList}
+                className="rounded bg-green-800 hover:bg-green-700 text-zinc-200 px-8 py-2 orbitron-500"
+              >
+                Fetch
+              </button>
+              {imageList.length > 0 && (
+                <ul className="bg-gray-100 p-4 rounded text-sm space-y-2">
+                  {imageList.map((image, index) => (
+                    <li key={index} className="flex items-center gap-2">
+                      <span className="text-gray-700">{image}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </div>
         </div>
-    );
+      </div>
+    </main>
+  );
 };
 
 export default ImagePage;
