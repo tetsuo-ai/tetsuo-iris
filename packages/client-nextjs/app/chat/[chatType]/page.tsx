@@ -1,10 +1,12 @@
 import { ChatAgentPage } from "@/components/pages/ChatPage/ChatAgentPage";
 import { type ChatType } from "@/mutations/useChatCompletion";
 
-export default function ChatAgent({
+export default async function ChatAgent({
   params,
 }: {
-  params: { chatType: string };
+  params: Promise<{ chatType: ChatType }>;
 }) {
-  return <ChatAgentPage chatType={params.chatType as ChatType} />;
+  const chatType = (await params).chatType;
+
+  return <ChatAgentPage chatType={chatType} />;
 }
