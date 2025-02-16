@@ -71,7 +71,7 @@ export default function FinancePage() {
             <div className="flex flex-row space-x-2 mt-4 justify-center">
               <button
                 onClick={openModal}
-                className="bg-blue-500 text-white px-4 w-full py-2 rounded-md hover:bg-blue-600"
+                className="bg-blue-500 text-white px-4 w-full py-2 rounded hover:bg-blue-600 orbitron-500"
               >
                 Open Jupiter
               </button>

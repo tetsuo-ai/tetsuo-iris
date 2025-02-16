@@ -12,7 +12,7 @@ export default function Navbar() {
   return (
     <nav className="flex justify-between items-center">
       <Link href="/">
-        <img src={logo.src} alt="Tetsuo Logo" className="w-16" />
+        <img src={logo.src} alt="Tetsuo Logo" className="w-12" />
       </Link>
       <div className="flex items-center gap-2">
         <WalletMultiButton />
