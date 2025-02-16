@@ -75,7 +75,7 @@ const JupiterAPIInteraction: React.FC<JupiterAPIInteractionProps> = ({
               placeholder={parameters[key]}
               value={inputData[key] || ""}
               onChange={(e) => handleChange(key, e.target.value)}
-              className="w-full border-zinc-800 focus-visible:ring-teal-600 jetbrains-mono-200"
+              className="text-zinc-200 w-full border-zinc-800 focus-visible:ring-teal-600 jetbrains-mono-200"
             />
           </div>
         ))}
