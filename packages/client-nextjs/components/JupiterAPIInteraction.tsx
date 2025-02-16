@@ -65,12 +65,12 @@ const JupiterAPIInteraction: React.FC<JupiterAPIInteractionProps> = ({
 
   return (
     <div className="">
-      <h2 className="text-lg uppercase text-zinc-300 orbitron-500">{endpoint}</h2>
+      <h2 className="text-lg uppercase text-zinc-200 orbitron-500">{endpoint}</h2>
 
       <div className="mt-6 flex flex-col gap-4">
         {Object.keys(parameters).map((key) => (
           <div key={key} className="flex flex-col gap-2">
-            <label className="block text-sm jetbrains-mono-400">{parameters[key]}</label>
+            <label className="block text-sm jetbrains-mono-400 text-zinc-200">{parameters[key]}</label>
             <Input
               placeholder={parameters[key]}
               value={inputData[key] || ""}
@@ -90,7 +90,7 @@ const JupiterAPIInteraction: React.FC<JupiterAPIInteractionProps> = ({
       </Button>
 
       {error && <AlertErrorMessage message={error} className="mt-6 border-red-500 text-red-500 jetbrains-mono-400" />}
-      {response && <Textarea value={response} readOnly className="mt-6 w-full h-[10rem] border-zinc-700 focus-visible:ring-emerald-600 jetbrains-mono-200" />}
+      {response && <Textarea value={response} readOnly className="mt-6 w-full h-[10rem] border-zinc-700 focus-visible:ring-emerald-600 jetbrains-mono-200 text-zinc-200" />}
     </div>
   );
 };

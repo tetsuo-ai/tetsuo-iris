@@ -91,7 +91,7 @@ export default function FinancePage() {
             onClick={(e) => e.stopPropagation()} // Prevent click from closing modal
           >
             <div className="p-4 flex justify-between place-items-center">
-              <h2 className="text-zinc-200 text-xl orbitron-700">Jupiter API Endpoints</h2>
+              <h2 className="text-zinc-50 text-xl orbitron-700">Jupiter API Endpoints</h2>
               <button
                 onClick={closeModal}
                 className="text-red-500 hover:text-red-600 text-3xl px-2"
