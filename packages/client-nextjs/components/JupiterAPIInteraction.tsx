@@ -64,27 +64,33 @@ const JupiterAPIInteraction: React.FC<JupiterAPIInteractionProps> = ({
   };
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-lg uppercase font-semibold">{endpoint}</h2>
+    <div className="">
+      <h2 className="text-lg uppercase text-zinc-200 orbitron-500">{endpoint}</h2>
 
-      {Object.keys(parameters).map((key) => (
-        <div key={key}>
-          <label className="block text-sm font-medium">{parameters[key]}</label>
-          <Input
-            placeholder={parameters[key]}
-            value={inputData[key] || ""}
-            onChange={(e) => handleChange(key, e.target.value)}
-            className="w-full"
-          />
-        </div>
-      ))}
+      <div className="mt-6 flex flex-col gap-4">
+        {Object.keys(parameters).map((key) => (
+          <div key={key} className="flex flex-col gap-2">
+            <label className="block text-sm jetbrains-mono-400 text-zinc-200">{parameters[key]}</label>
+            <Input
+              placeholder={parameters[key]}
+              value={inputData[key] || ""}
+              onChange={(e) => handleChange(key, e.target.value)}
+              className="text-zinc-200 w-full border-zinc-800 focus-visible:ring-teal-600 jetbrains-mono-200"
+            />
+          </div>
+        ))}
+      </div>
 
-      <Button onClick={handleSubmit} disabled={isLoading}>
+      <Button
+        onClick={handleSubmit}
+        disabled={isLoading}
+        className="mt-8 bg-emerald-700 rounded orbitron-400 text-zinc-200 text-lg px-6 py-4 hover:bg-emerald-600"
+      >
         {isLoading ? "Submitting..." : "Submit"}
       </Button>
 
-      {error && <AlertErrorMessage message={error} />}
-      {response && <Textarea value={response} readOnly className="w-full" />}
+      {error && <AlertErrorMessage message={error} className="mt-6 border-red-500 text-red-500 jetbrains-mono-400" />}
+      {response && <Textarea value={response} readOnly className="mt-6 w-full h-[10rem] border-zinc-700 focus-visible:ring-emerald-600 jetbrains-mono-200 text-zinc-200" />}
     </div>
   );
 };

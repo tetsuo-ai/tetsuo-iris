@@ -14,6 +14,7 @@ type ChatInputProps = {
   onSubmit: (userMessage: string) => void;
   onMessageSent: (aiResponse: string) => void;
   setStreamingResponse: (response: string) => void;
+  className?: string;
 };
 
 export const ChatInput: FC<ChatInputProps> = ({
@@ -22,6 +23,7 @@ export const ChatInput: FC<ChatInputProps> = ({
   onSubmit,
   onMessageSent,
   setStreamingResponse,
+  className
 }) => {
   const [message, setMessage] = useState("");
   const chatMutation = useChatMutation();
@@ -82,14 +84,14 @@ export const ChatInput: FC<ChatInputProps> = ({
   );
 
   return (
-    <form onSubmit={handleSubmit} className="relative">
+    <form onSubmit={handleSubmit} className={`relative ${className}`}>
       <Textarea
         value={message}
         onChange={(e) => setMessage(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="Type your message..."
         disabled={chatMutation.isPending}
-        className="min-h-[80px] pr-[88px] resize-none"
+        className="min-h-[120px] pr-[60px] resize-none border-2 border-zinc-800 focus-visible:border-blue-500/50 focus-visible:ring-0"
       />
       <div className="absolute bottom-2 right-2">
         <Button

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { memo, useEffect, useRef } from "react";
 
 declare global {
   interface Window {
@@ -8,7 +8,7 @@ declare global {
   }
 }
 
-export const TradingViewChart = () => {
+function TradingViewWidget() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -17,17 +17,18 @@ export const TradingViewChart = () => {
 
       new window.TradingView.widget({
         container_id: containerRef.current.id,
-        symbol: "MEXC:TETSUOUSDT",
-        interval: "30",
+        symbol: "RAYDIUM:TETSUOSOL_2KB3I5.USD",
+        interval: "5",
         timezone: "Etc/UTC",
         theme: "dark",
         style: "1",
         locale: "en",
+        range: "5D",
         toolbar_bg: "#f1f3f6",
         enable_publishing: false,
         allow_symbol_change: true,
-        hide_volume: true,
         width: "100%",
+        height: "100%",
       });
     };
 
@@ -46,5 +47,7 @@ export const TradingViewChart = () => {
     }
   }, []);
 
-  return <div id="tradingview_widget" ref={containerRef} className="w-full" />;
-};
+  return <div id="tradingview-widget" ref={containerRef} style={{ height: "100%", width: "100%" }}></div>;
+}
+
+export default memo(TradingViewWidget);

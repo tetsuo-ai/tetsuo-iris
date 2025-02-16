@@ -1,22 +1,24 @@
 ---
 import Layout from "../layouts/Layout.astro";
 
-import Sidebar from "../components/Sidebar.astro";
 import TradingViewWidget from "../components/TradingViewWidget";
 import WhaleTransactionsWidget from "../components/WhaleTransactionsWidget";
+import JupiterTerminalWidget from "../components/JupiterTerminalWidget";
 ---
 
-<Layout title="Companion | Finance">
+<Layout title="TETSUO Iris | Finance">
   <div class="bg-zinc-950">
     <div class="p-4 h-screen flex gap-4 overflow-hidden">
-      <Sidebar />
       <div class="grow grid gap-4">
         <div class="h-[40rem]">
           <TradingViewWidget client:load />
         </div>
-        <div class="overflow-y-auto">
+        <div class="overflow-y-auto rounded">
           <WhaleTransactionsWidget client:visible />
         </div>
+      </div>
+      <div class="h-[568px] w-[350px] overflow-auto">
+        <JupiterTerminalWidget client:only="react" />
       </div>
     </div>
   </div>

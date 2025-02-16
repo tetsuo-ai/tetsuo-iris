@@ -180,7 +180,7 @@ const transactions = [
 
 export default function WhaleTransactionsWidget() {
   return (
-    <table className="w-full table-auto font-mono font-semibold text-zinc-200">
+    <table className="w-full table-auto jetbrains-mono-400 text-zinc-200">
       <thead className="sticky top-0 bg-zinc-900">
         <tr className="text-left">
           <th className="p-2">Date</th>
@@ -191,8 +191,8 @@ export default function WhaleTransactionsWidget() {
         </tr>
       </thead>
       <tbody>
-      {transactions.map((txn) => (
-        <tr className="outline outline-1 outline-zinc-900">
+      {transactions.map((txn, i) => (
+        <tr key={i} className="outline outline-1 outline-zinc-900">
           <td className="p-2">{new Date(txn.timestamp).toLocaleString(navigator.languages)}</td>
           <td className="p-2">${txn.price_usd.toFixed(5)}</td>
           <td className="p-2">${txn.amount_usd.toFixed(2)}</td>
@@ -207,7 +207,7 @@ export default function WhaleTransactionsWidget() {
               href={`https://solscan.io/tx/${txn.transaction_hash}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-500"
+              className="text-sky-500"
             >
               {txn.transaction_hash.slice(0, 4)}....{txn.transaction_hash.slice(-4)}
             </a>
