@@ -3,6 +3,77 @@ import blueGalacticEye from "../app/images/blue-galactic-iris.png";
 
 import Link from "next/link";
 
+const pagesUtilities = [
+  {
+    name: "Text Sentiment",
+    description: "Analyze sentiment of custom text prompts",
+    href: "/tools/sentiment",
+  },
+  {
+    name: "Code Analysis",
+    description: "Examines code in GitHub repo URL or provided text body",
+    href: "/tools/code",
+  },
+  {
+    name: "Text Summary",
+    description: "Summarizes text in the URL or provided text body",
+    href: "/tools/summary",
+  },
+  {
+    name: "Web Search",
+    description: "Searches for your query and provides a summarized response",
+    href: "/tools/search",
+  },
+  {
+    name: "Text to Speech",
+    description: "Narrates voiceover for a given text",
+    href: "/tools/speech",
+  },
+];
+
+const pagesMedia = [
+  {
+    name: "Flux",
+    description: "Generate Flux images with your custom prompts",
+    href: "/media/flux",
+  },
+  {
+    name: "DALL-E",
+    description: "Generate vivid images using DALL-E",
+    href: "/media/dalle",
+  },
+  {
+    name: "Animate",
+    description: "Generate RGB channel pass animation from image",
+    href: "/media/animation",
+  },
+  {
+    name: "Kensub",
+    description: "Generate subtitled viral videos in a single click",
+    href: "/media/kensub",
+  },
+  {
+    name: "Launchpad SKRYR",
+    description: "Universal multimedia launchpad and canvas",
+    href: "/media/skryr",
+  },
+  {
+    name: "Image API",
+    description: "Fetch logos, memes and images",
+    href: "/media/image",
+  },
+  {
+    name: "Diablo 1 Game",
+    description: "Play the iconic Diablo 1 game in the browser!",
+    href: "/media/diablo",
+  },
+  {
+    name: "DOSBOX Games",
+    description: "Play nostalgic classic games in the browser!",
+    href: "/media/dosgames",
+  },
+];
+
 export default function Home() {
   return (
     <main className="bg-zinc-950 p-4">
@@ -60,61 +131,22 @@ export default function Home() {
           Utilities
         </h2>
         <div className="mt-8 w-full grid grid-cols-2 gap-4">
-          <div
-            className="h-56 p-4 bg-zinc-900 grid place-items-center rounded-md hover:cursor-pointer hover:bg-gradient-to-br hover:from-zinc-700 hover:via-zinc-800 hover:to-zinc-900">
-            <div className="text-center flex flex-col gap-2">
-              <h3 className="text-zinc-200 text-4xl orbitron-600">
-                Text Sentiment
-              </h3>
-              <p className="text-emerald-500 text-lg jetbrains-mono-500">
-                Analyze sentiment of custom text prompts
-              </p>
-            </div>
-          </div>
-          <div
-            className="h-56 p-4 bg-zinc-900 grid place-items-center rounded-md hover:cursor-pointer hover:bg-gradient-to-br hover:from-zinc-700 hover:via-zinc-800 hover:to-zinc-900">
-            <div className="text-center flex flex-col gap-2">
-              <h3 className="text-zinc-200 text-4xl orbitron-600">
-                Code Analysis
-              </h3>
-              <p className="text-emerald-500 text-lg jetbrains-mono-500">
-                Examines code in GitHub repo URL or provided text body
-              </p>
-            </div>
-          </div>
-          <div
-            className="h-56 p-4 bg-zinc-900 grid place-items-center rounded-md hover:cursor-pointer hover:bg-gradient-to-br hover:from-zinc-700 hover:via-zinc-800 hover:to-zinc-900">
-            <div className="text-center flex flex-col gap-2">
-              <h3 className="text-zinc-200 text-4xl orbitron-600">
-                Text Summary
-              </h3>
-              <p className="text-emerald-500 text-lg jetbrains-mono-500">
-                Summarizes text in the URL or provided text body
-              </p>
-            </div>
-          </div>
-          <div
-            className="h-56 p-4 bg-zinc-900 grid place-items-center rounded-md hover:cursor-pointer hover:bg-gradient-to-br hover:from-zinc-700 hover:via-zinc-800 hover:to-zinc-900">
-            <div className="text-center flex flex-col gap-2">
-              <h3 className="text-zinc-200 text-4xl orbitron-600">
-                Web Search
-              </h3>
-              <p className="text-emerald-500 text-lg jetbrains-mono-500">
-                Searches for your query and provides a summarized response
-              </p>
-            </div>
-          </div>
-          <div
-            className="h-56 p-4 bg-zinc-900 grid place-items-center rounded-md hover:cursor-pointer hover:bg-gradient-to-br hover:from-zinc-700 hover:via-zinc-800 hover:to-zinc-900">
-            <div className="text-center flex flex-col gap-2">
-              <h3 className="text-zinc-200 text-4xl orbitron-600">
-                Text to Speech
-              </h3>
-              <p className="text-emerald-500 text-lg jetbrains-mono-500">
-                Narrates voiceover for a given text
-              </p>
-            </div>
-          </div>
+          {pagesUtilities.map((utility) => (
+            <Link href={utility.href}>
+              <div
+                key={utility.href}
+                className="h-56 p-4 bg-zinc-900 grid place-items-center rounded-md hover:cursor-pointer hover:bg-gradient-to-br hover:from-zinc-700 hover:via-zinc-800 hover:to-zinc-900">
+                <div className="text-center flex flex-col gap-2">
+                  <h3 className="text-zinc-200 text-4xl orbitron-600">
+                    {utility.name}
+                  </h3>
+                  <p className="text-emerald-500 text-lg jetbrains-mono-500">
+                    {utility.description}
+                  </p>
+                </div>
+              </div>
+            </Link>
+          ))}
         </div>
       </section>
 
@@ -124,94 +156,21 @@ export default function Home() {
           Media
         </h2>
         <div className="mt-8 w-full grid grid-cols-2 gap-4">
-          <div
-            className="h-56 p-4 bg-zinc-900 grid place-items-center rounded-md hover:cursor-pointer hover:bg-gradient-to-br hover:from-zinc-700 hover:via-zinc-800 hover:to-zinc-900">
-            <div className="text-center flex flex-col gap-2">
-              <h3 className="text-zinc-200 text-4xl orbitron-600">
-                Flux
-              </h3>
-              <p className="text-sky-600 text-lg jetbrains-mono-500">
-                Generate Flux images with your custom prompts
-              </p>
-            </div>
-          </div>
-          <div
-            className="h-56 p-4 bg-zinc-900 grid place-items-center rounded-md hover:cursor-pointer hover:bg-gradient-to-br hover:from-zinc-700 hover:via-zinc-800 hover:to-zinc-900">
-            <div className="text-center flex flex-col gap-2">
-              <h3 className="text-zinc-200 text-4xl orbitron-600">
-                DALL-E
-              </h3>
-              <p className="text-sky-600 text-lg jetbrains-mono-500">
-                Generate vivid images using DALL-E
-              </p>
-            </div>
-          </div>
-          <div
-            className="h-56 p-4 bg-zinc-900 grid place-items-center rounded-md hover:cursor-pointer hover:bg-gradient-to-br hover:from-zinc-700 hover:via-zinc-800 hover:to-zinc-900">
-            <div className="text-center flex flex-col gap-2">
-              <h3 className="text-zinc-200 text-4xl orbitron-600">
-                Animate
-              </h3>
-              <p className="text-sky-600 text-lg jetbrains-mono-500">
-                Generate RGB channel pass animation from image
-              </p>
-            </div>
-          </div>
-          <div
-            className="h-56 p-4 bg-zinc-900 grid place-items-center rounded-md hover:cursor-pointer hover:bg-gradient-to-br hover:from-zinc-700 hover:via-zinc-800 hover:to-zinc-900">
-            <div className="text-center flex flex-col gap-2">
-              <h3 className="text-zinc-200 text-4xl orbitron-600">
-                Kensub
-              </h3>
-              <p className="text-sky-600 text-lg jetbrains-mono-500">
-                Generate subtitled viral videos in a single click
-              </p>
-            </div>
-          </div>
-          <div
-            className="h-56 p-4 bg-zinc-900 grid place-items-center rounded-md hover:cursor-pointer hover:bg-gradient-to-br hover:from-zinc-700 hover:via-zinc-800 hover:to-zinc-900">
-            <div className="text-center flex flex-col gap-2">
-              <h3 className="text-zinc-200 text-4xl orbitron-600">
-                Launchpad SKRYR
-              </h3>
-              <p className="text-sky-600 text-lg jetbrains-mono-500">
-                Universal multimedia launchpad and canvas
-              </p>
-            </div>
-          </div>
-          <div
-            className="h-56 p-4 bg-zinc-900 grid place-items-center rounded-md hover:cursor-pointer hover:bg-gradient-to-br hover:from-zinc-700 hover:via-zinc-800 hover:to-zinc-900">
-            <div className="text-center flex flex-col gap-2">
-              <h3 className="text-zinc-200 text-4xl orbitron-600">
-                Image API
-              </h3>
-              <p className="text-sky-600 text-lg jetbrains-mono-500">
-                Fetch logos, memes and images
-              </p>
-            </div>
-          </div>
-          <div
-            className="h-56 p-4 bg-zinc-900 grid place-items-center rounded-md hover:cursor-pointer hover:bg-gradient-to-br hover:from-zinc-700 hover:via-zinc-800 hover:to-zinc-900">
-            <div className="text-center flex flex-col gap-2">
-              <h3 className="text-zinc-200 text-4xl orbitron-600">
-                Diablo 1 Game
-              </h3>
-              <p className="text-sky-600 text-lg jetbrains-mono-500">
-                Play the iconic Diablo 1 game in the browser!
-              </p>
-            </div>
-          </div>
-          <div
-            className="h-56 p-4 bg-zinc-900 grid place-items-center rounded-md hover:cursor-pointer hover:bg-gradient-to-br hover:from-zinc-700 hover:via-zinc-800 hover:to-zinc-900">
-            <div className="text-center flex flex-col gap-2">
-              <h3 className="text-zinc-200 text-4xl orbitron-600">
-                DOSBox Games
-              </h3>
-              <p className="text-sky-600 text-lg jetbrains-mono-500">
-                Play nostalgic classic games in the browser!
-              </p>
-            </div>
-          </div>
+          {pagesMedia.map((media) => (
+            <Link href={media.href} key={media.href}>
+              <div
+                className="h-56 p-4 bg-zinc-900 grid place-items-center rounded-md hover:cursor-pointer hover:bg-gradient-to-br hover:from-zinc-700 hover:via-zinc-800 hover:to-zinc-900">
+                <div className="text-center flex flex-col gap-2">
+                  <h3 className="text-zinc-200 text-4xl orbitron-600">
+                    {media.name}
+                  </h3>
+                  <p className="text-sky-600 text-lg jetbrains-mono-500">
+                    {media.description}
+                  </p>
+                </div>
+              </div>
+            </Link>
+          ))}
         </div>
       </section>
 
