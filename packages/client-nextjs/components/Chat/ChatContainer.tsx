@@ -17,24 +17,26 @@ export const ChatContainer: FC<{ chatType: ChatType }> = ({ chatType }) => {
   };
 
   return (
-    <div className="pb-20">
-      <div className="space-y-4">
+    <div className="h-full flex flex-col justify-between gap-8">
+      <div className="grow h-0 space-y-4 overflow-y-auto rounded">
         {messages.map((message, index) => (
           <Card
             key={index}
-            className={`p-4 ${message.role === "user" ? "ml-12 bg-primary/10" : "mr-12 bg-muted"
-              }`}
+            className={`
+              p-4 bg-zinc-900 rounded border-0 jetbrains-mono-400
+              ${message.role === "user" ? "ml-40" : "mr-40 bg-blue-500/50"}
+             `}
           >
             <p className="text-sm whitespace-pre-wrap">{message.content}</p>
           </Card>
         ))}
         {streamingResponse && (
-          <Card className="p-4 mr-12 bg-muted">
+          <Card className="p-4 mr-40 bg-blue-500/50 rounded border-0 jetbrains-mono-400">
             <p className="text-sm whitespace-pre-wrap">{streamingResponse}</p>
           </Card>
         )}
       </div>
-      <div className="fixed bottom-20 left-4 right-4 bg-background rounded">
+      <div className="jetbrains-mono-400">
         <ChatInput
           chatType={chatType}
           messages={messages}

@@ -1,11 +1,9 @@
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+"use client";
+
 import { type FC } from "react";
 import Link from "next/link";
+
+import Navbar from "@/components/Navbar";
 
 type Agent = {
   name: string;
@@ -39,27 +37,34 @@ const agents: Agent[] = [
 const AgentCard: FC<{ agent: Agent }> = ({ agent }) => {
   return (
     <Link href={`/chat/${agent.name.toLowerCase()}`}>
-      <Card className="hover:bg-muted cursor-pointer transition-colors">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">{agent.emoji}</span>
-            <CardTitle>{agent.name}</CardTitle>
-          </div>
-          <CardDescription>{agent.description}</CardDescription>
-        </CardHeader>
-      </Card>
+      <div
+        className="h-56 p-8 bg-zinc-900 grid place-items-center rounded-md hover:cursor-pointer hover:bg-gradient-to-br hover:from-zinc-700 hover:via-zinc-800 hover:to-zinc-900">
+        <div className="text-center flex flex-col gap-2">
+          <h3 className="text-zinc-200 text-4xl orbitron-600">
+            {agent.emoji} {agent.name}
+          </h3>
+          <p className="text-zinc-500 text-lg jetbrains-mono-500">
+            {agent.description}
+          </p>
+        </div>
+      </div>
     </Link>
   );
 };
 
 export default function Chat() {
   return (
-    <div className="container mx-auto py-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {agents.map((agent) => (
-          <AgentCard key={agent.name} agent={agent} />
-        ))}
+    <main className="bg-zinc-950">
+      <div className="p-4 h-screen flex flex-col gap-4 overflow-hidden">
+        <Navbar />
+        <div className="grow grid place-items-center">
+          <div className="max-w-screen-lg grid grid-cols-2 gap-4">
+            {agents.map((agent) => (
+              <AgentCard key={agent.name} agent={agent} />
+            ))}
+          </div>
+        </div>
       </div>
-    </div>
+    </main>
   );
 }
