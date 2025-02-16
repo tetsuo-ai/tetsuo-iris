@@ -1,7 +1,10 @@
+"use client"
+
 import Image from "next/image";
 import blueGalacticEye from "../app/images/blue-galactic-iris.png";
 
 import Link from "next/link";
+import Navbar from "@/components/Navbar";
 
 const pagesUtilities = [
   {
@@ -77,6 +80,7 @@ const pagesMedia = [
 export default function Home() {
   return (
     <main className="bg-zinc-950 p-4">
+      <Navbar />
       {/* Title */}
       <section className="mt-4 w-full grid place-items-center">
         <div className="w-[48rem] relative grid place-items-center">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import Navbar from "@/components/Navbar";
 
 const DOS_GAMES_URL = "https://dos.zone/";
 
@@ -62,6 +63,7 @@ const DOSGamesPage = () => {
   return (
     <main className="bg-zinc-950">
       <div className="p-4 h-screen flex flex-col gap-4 overflow-hidden">
+        <Navbar />
         {/* Iframe Wrapper */}
         <div className="relative w-full h-full overflow-hidden">
           <iframe
