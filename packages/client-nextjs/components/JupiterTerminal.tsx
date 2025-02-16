@@ -13,7 +13,7 @@ export function JupiterTerminal() {
       enableWalletPassthrough: true,
       displayMode: "integrated",
       integratedTargetId: "jupiter-terminal",
-      endpoint: "https://api.mainnet-beta.solana.com",
+      endpoint: "https://solitary-ultra-mansion.solana-mainnet.quiknode.pro/ee35b1f9f74c08dcdd688eafb161edf99dd3c3f6",
       refetchIntervalForTokenAccounts: 10000,
       defaultExplorer: "Solscan",
       formProps: {
