@@ -1,5 +1,7 @@
-import DallePage from "@/components/pages/MediaPage/DallePage/";
+"use client";
 
-export default function Flux() {
-  return <DallePage />;
+import DallePage from "@/components/pages/MediaPage/DallePage";
+
+export default function Dalle() {
+  return <DallePage onMediaSelect={() => { }} />;
 }
