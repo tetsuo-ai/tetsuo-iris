@@ -4,9 +4,14 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertErrorMessage } from "@/components/shared/AlertErrorMessage";
-import Breadcrumbs from "@/components/Breadcrumbs";
+import type { MediaItem } from "@/components/ui/UnboundMediaList";
 
-const FluxPage = () => {
+export interface FluxPageProps {
+    onMediaSelect: (media: MediaItem) => void;
+    onMediaDragStart?: (media: MediaItem) => void;
+}
+
+const FluxPage: React.FC<FluxPageProps> = ({ onMediaSelect }) => {
     const [prompt, setPrompt] = useState("");
     const [response, setResponse] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -16,27 +21,17 @@ const FluxPage = () => {
         setError(null);
         setResponse(null);
         setIsLoading(true);
-
         try {
-            console.log("Request Payload:", { prompt, response_format: "url" });
-
             const res = await fetch("/api/v1/image/flux", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     prompt,
                     response_format: "url",
                 }),
             });
-
-            console.log("Response Status:", res.status);
-
             if (!res.ok) {
                 const errorData = await res.json();
-                console.error("Error Response Body:", errorData);
-
                 if (errorData?.detail) {
                     setError(errorData.detail[0]?.msg || "Validation Error.");
                 } else {
@@ -44,65 +39,76 @@ const FluxPage = () => {
                 }
                 return;
             }
-
-            const data = await res.json(); // Parse JSON response
-            console.log("Parsed Response Data:", data);
-
+            const data = await res.json();
             if (data?.imageUrl) {
                 const fullUrl = `https://services.tetsuo.ai/${data.imageUrl}`;
-                console.log("Constructed Image URL:", fullUrl);
                 setResponse(fullUrl);
             } else {
-                setError("Unexpected response format. Please try again.");
+                setError("Unexpected response format.");
             }
         } catch (err) {
-            console.error("Fetch Error:", err);
             setError(err instanceof Error ? err.message : "Failed to generate Flux image.");
         } finally {
             setIsLoading(false);
         }
     };
 
-    return (
-        <div className="space-y-8 p-8 max-w-lg mx-auto">
-            <Breadcrumbs /> {/* Breadcrumb Navigation */}
-            <h1 className="text-2xl font-bold">Generate Flux Image</h1>
+    const handleSelectImage = (e: React.MouseEvent<HTMLImageElement>) => {
+        e.stopPropagation();
+        if (response) {
+            const media: MediaItem = {
+                type: "image",
+                src: response,
+                x: 50,
+                y: 50,
+                scale: 1,
+                rotation: 0,
+                opacity: 1,
+                visible: true,
+                showAt: 0,
+                hideAt: 120,
+                interruptOnPlay: true,
+            };
+            onMediaSelect(media);
+        }
+    };
 
-            {/* Input Fields */}
-            <div className="space-y-4">
+    return (
+        <div className="w-full space-y-4 max-w-screen-md mx-auto">
+            {/* Header */}
+            <div className="text-center">
+                <h1 className="text-2xl font-bold">Generate Flux Image</h1>
+            </div>
+            {/* Prompt & Button */}
+            <div className="space-y-2">
                 <Textarea
                     placeholder="Enter your prompt"
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
-                    className="w-full"
+                    className="w-full h-10"
                 />
-
                 <Button
                     onClick={handleGenerateFluxImage}
                     disabled={isLoading || !prompt.trim()}
-                    variant="default"
+                    variant="outline"
+                    className="w-full h-10"
                 >
                     {isLoading ? "Generating..." : "Generate"}
                 </Button>
             </div>
-
-            {/* Error Message */}
             {error && <AlertErrorMessage message={error} />}
-
-            {/* Response Display */}
+            {/* Generated Image Preview */}
             {response && (
-                <div className="mt-8">
-                    <h3 className="text-lg font-semibold">Generated Image:</h3>
-                    <div className="mt-4">
-                        <img
-                            src={response}
-                            alt="Generated Flux"
-                            className="rounded-md max-w-full"
-                        />
-                        <p className="mt-2 text-sm text-muted">
-                            The image has been successfully generated and rendered below.
-                        </p>
-                    </div>
+                <div className="mt-4 text-center">
+                    <img
+                        src={response}
+                        alt="Generated Flux"
+                        className="rounded-md w-full cursor-pointer"
+                        onClick={handleSelectImage}
+                    />
+                    <p className="mt-2 text-sm text-muted">
+                        Click this image to send it as unbound media.
+                    </p>
                 </div>
             )}
         </div>
