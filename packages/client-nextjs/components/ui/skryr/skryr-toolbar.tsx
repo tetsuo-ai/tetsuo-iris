@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { SelectedElement } from "@/components/pages/MediaPage/SkryrPage";
 import UnboundMediaList, { MediaItem } from "@/components/ui/UnboundMediaList";
@@ -85,13 +85,12 @@ const SkryrToolbar: React.FC<SkryrToolbarProps> = ({
     renderOptionsContent,
     setKeyMappings,
     setMediaList,
-    toggleMatrixMode = () => {},
-    toggleAsciiMode = () => {},
-    isMatrixModeActive = true,
-    isAsciiModeActive = true,
-    onDeselectElement = () => {}
+    toggleMatrixMode,
+    toggleAsciiMode,
+    isMatrixModeActive,
+    isAsciiModeActive,
+    onDeselectElement,
 }) => {
-    // Internal toggle states for panels inside the palette
     useEffect(() => {
         const link = document.createElement("link");
         link.rel = "stylesheet";
@@ -104,8 +103,7 @@ const SkryrToolbar: React.FC<SkryrToolbarProps> = ({
     const [showUnboundMediaList, setShowUnboundMediaList] = useState(true);
     const [showVirtualKeyboard, setShowVirtualKeyboard] = useState(true);
     const { computedColor } = useSkryrColor();
-    
-    // Filter out already bound media from Unbound Media List
+    const [isWinampActive, setIsWinampActive] = useState(false);
     const boundIndices = keyMappings
         .filter((mapping) => mapping.assignedIndex !== null)
         .map((mapping) => mapping.assignedIndex);
@@ -113,8 +111,7 @@ const SkryrToolbar: React.FC<SkryrToolbarProps> = ({
     const unboundMedia = mediaList
         .map((item, index) => ({ item, index }))
         .filter(({ index }) => !boundIndices.includes(index));
-    
-    // Save previous panel states when toggling all off
+
     const [prevPanels, setPrevPanels] = useState({
         launchpad: true,
         mediaPanel: true,
@@ -122,7 +119,6 @@ const SkryrToolbar: React.FC<SkryrToolbarProps> = ({
         virtualKeyboard: true,
     });
 
-    // Toggle all panels at once
     const toggleAllPanels = () => {
         if (showPalette) {
             setPrevPanels({
@@ -148,7 +144,42 @@ const SkryrToolbar: React.FC<SkryrToolbarProps> = ({
     const handleMediaSelect = (media: MediaItem) => {
         setMediaList((prev) => [...prev, media]);
     };
-    // Render a row for the keybinding keyboard panel.
+
+    // Toggle Winamp visibility and playback
+    const handleToggleWinamp = () => {
+        setIsWinampActive((prev) => {
+            const newState = !prev;
+            const webamp = (window as any).webampInstance as any;
+            if (webamp) {
+                const container = document.getElementById("webamp");
+                if (container) {
+                    container.style.display = newState ? "block" : "none";
+                    if (newState) {
+                        webamp.store.dispatch({ type: "PLAY" });
+                    } else {
+                        webamp.store.dispatch({ type: "STOP" });
+                    }
+                }
+            }
+            return newState;
+        });
+    };
+
+    // Tie Play/Pause to Winamp
+    const handleWinampPlayPause = () => {
+        const webamp = (window as any).webampInstance as any;
+        if (webamp) {
+            if (isPlaying) {
+                webamp.store.dispatch({ type: "PAUSE" });
+            } else {
+                webamp.store.dispatch({ type: "PLAY" });
+            }
+            handlePlayPause(); // Update isPlaying in SkryrPage
+        } else {
+            handlePlayPause(); // Fallback
+        }
+    };
+
     const renderKeyboardRow = (row: string[], startIndex: number): JSX.Element => (
         <div className="flex gap-1 mb-1 justify-center">
             {row.map((keyLabel, i) => {
@@ -244,49 +275,36 @@ const SkryrToolbar: React.FC<SkryrToolbarProps> = ({
         </div>
     );
 
-    // Render the keybinding keyboard panel.
     const renderKeybindingKeyboardPanel = (): JSX.Element => {
         let currentIndex = 0;
         return (
             <div className="p-2 border border-gray-500 rounded text-center !bg-transparent shadow-none">
                 <div className="mb-2 font-bold">Media Launchpad</div>
                 {renderKeyboardRow(["`", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "="], currentIndex)}
-                {(() => {
-                    currentIndex += 13;
-                    return null;
-                })()}
+                {(() => { currentIndex += 13; return null; })()}
                 {renderKeyboardRow(["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P", "[", "]", "\\"], currentIndex)}
-                {(() => {
-                    currentIndex += 13;
-                    return null;
-                })()}
+                {(() => { currentIndex += 13; return null; })()}
                 {renderKeyboardRow(["A", "S", "D", "F", "G", "H", "J", "K", "L", ";", "'"], currentIndex)}
-                {(() => {
-                    currentIndex += 11;
-                    return null;
-                })()}
+                {(() => { currentIndex += 11; return null; })()}
                 {renderKeyboardRow(["Z", "X", "C", "V", "B", "N", "M", ",", ".", "/"], currentIndex)}
-                {(() => {
-                    currentIndex += 10;
-                    return null;
-                })()}
+                {(() => { currentIndex += 10; return null; })()}
                 <div className="mt-2">Numpad:</div>
                 {renderKeyboardRow(["7", "8", "9", "-", "4", "5", "6", "+", "1", "2", "3", "0", "."], currentIndex)}
             </div>
         );
     };
 
-    // Handle keyboard shortcuts
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
             switch (event.code) {
-                case "Escape": // 🔹 Toggle Virtual Keyboard (Fix for Border Sync)
+                case "Escape":
                     event.preventDefault();
                     onDeselectElement();
                     break;
                 case "F1":
                     event.preventDefault();
                     alert(`🔥 Hotkey Guide:
+- Escape: Deselect Element
 - Tab: Toggle All Panels
 - F1: Help
 - F2: Toggle Launchpad Keyboard
@@ -294,51 +312,44 @@ const SkryrToolbar: React.FC<SkryrToolbarProps> = ({
 - F4: Toggle Unbound Media Items
 - F7: Toggle ASCII Mode
 - F8: Toggle Matrix Mode
+- F9: Toggle Visualizer
 - Space: Play/Pause
-- F9: Stop
-- F10: Stop + Play
 - F11: Fullscreen Toggle
 - PageUp: Zoom In
 - PageDown: Zoom Out
 `);
-
-                case "F2": // 🔹 Toggle Virtual Keyboard (Fix for Border Sync)
+                    break;
+                case "F2":
                     event.preventDefault();
                     setShowVirtualKeyboard((prev) => !prev);
                     break;
-                case "F3": // 🔹 Toggle Media Panel
+                case "F3":
                     event.preventDefault();
                     setShowMediaPanel((prev) => !prev);
                     break;
-                case "F4": // 🔹 Toggle Unbound Media
+                case "F4":
                     event.preventDefault();
                     setShowUnboundMediaList((prev) => !prev);
                     break;
-                case "F7": // 🔹 Toggle ASCII Mode
+                case "F7":
                     event.preventDefault();
-                    setEmbeddedMode((prev: boolean) => !prev);
+                    toggleAsciiMode(); // Assuming F7 for ASCII
                     break;
-                case "F8": // 🔹 Toggle Matrix Mode
+                case "F8":
                     event.preventDefault();
-                    setBackgroundEnabled((prev: boolean) => !prev);
+                    toggleMatrixMode(); // F8 toggles matrix
                     break;
-                case "Tab": // 🔹 Toggle All Panels
+                case "F9":
+                    event.preventDefault();
+                    setBackgroundEnabled((prev) => !prev); // F9 toggles visualizer
+                    break;
+                case "Tab":
                     event.preventDefault();
                     toggleAllPanels();
                     break;
                 case "Space":
                     event.preventDefault();
-                    handlePlayPause();
-                    break;
-                case "F9":
-                    event.preventDefault();
-                    handleStop();
-                    break;
-                case "F10":
-                    event.preventDefault();
-                    // Execute stop then play
-                    handleStop();
-                    handlePlayPause();
+                    handleWinampPlayPause();
                     break;
                 case "F11":
                     event.preventDefault();
@@ -360,114 +371,111 @@ const SkryrToolbar: React.FC<SkryrToolbarProps> = ({
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [
         toggleAllPanels,
-        setShowLaunchpad,
+        setShowVirtualKeyboard,
         setShowMediaPanel,
         setShowUnboundMediaList,
-        setEmbeddedMode,
+        toggleAsciiMode,
+        toggleMatrixMode,
         setBackgroundEnabled,
-        handlePlayPause,
-        handleStop,
+        handleWinampPlayPause,
         handleToggleFullscreen,
-        handleZoomChange
+        handleZoomChange,
+        onDeselectElement,
     ]);
 
     return (
-        <div className="flex flex-row mx-auto  justify-center space-x-4" style={{ minWidth: "777px", width: showPalette ? "auto" : "0px", transition: "width 0.3s ease-in-out", backgroundColor: "rgb(0 0 0 / 0%)"}}>
-                    {/* Unbound Media Panel */}
-                    <div
-                        className="transition-all duration-300 ease-in-out"
-                        style={{
-                            width: showUnboundMediaList ? "250px" : "0px",
-                            minWidth: showUnboundMediaList ? "250px" : "0px",
-                            height: showUnboundMediaList ? "250px" : "0px",
-                            minHeight: showUnboundMediaList ? "250px" : "0px",
-                            opacity: showUnboundMediaList ? 1 : 0,
-                            visibility: showUnboundMediaList ? "visible" : "hidden",
-                            transition: "all 0.3s ease-in-out",
-                    // backgroundColor: "rgba(0, 0, 0, 0.8)"
-                        }}
-                    >
-                        <UnboundMediaList mediaList={mediaList} onToggleMedia={onToggleMedia} keyMappings={keyMappings} onOpenOptions={onOpenOptions} />
-                    </div>
+        <div className="flex flex-row mx-auto justify-center space-x-4" style={{ minWidth: "777px", width: showPalette ? "auto" : "0px", transition: "width 0.3s ease-in-out", backgroundColor: "rgb(0 0 0 / 0%)" }}>
+            <div
+                className="transition-all duration-300 ease-in-out"
+                style={{
+                    width: showUnboundMediaList ? "250px" : "0px",
+                    minWidth: showUnboundMediaList ? "250px" : "0px",
+                    height: showUnboundMediaList ? "250px" : "0px",
+                    minHeight: showUnboundMediaList ? "250px" : "0px",
+                    opacity: showUnboundMediaList ? 1 : 0,
+                    visibility: showUnboundMediaList ? "visible" : "hidden",
+                    transition: "all 0.3s ease-in-out",
+                }}
+            >
+                <UnboundMediaList mediaList={mediaList} onToggleMedia={onToggleMedia} keyMappings={keyMappings} onOpenOptions={onOpenOptions} />
+            </div>
 
-                    {/* Media Panel */}
-                    <div
-                        className="transition-all duration-300 ease-in-out"
-                        style={{
-                            width: showMediaPanel ? "400px" : "0px",
-                            minWidth: showMediaPanel ? "400px" : "0px",
-                            height: showMediaPanel ? "400px" : "0px",
-                            minHeight: showMediaPanel ? "400px" : "0px",
-                            opacity: showMediaPanel ? 1 : 0,
-                            visibility: showMediaPanel ? "visible" : "hidden",
-                            transition: "all 0.3s ease-in-out",
-                            backgroundColor: "rgba(0,0,0,0.8)"
-                        }}
-                    >
+            <div
+                className="transition-all duration-300 ease-in-out"
+                style={{
+                    width: showMediaPanel ? "400px" : "0px",
+                    minWidth: showMediaPanel ? "400px" : "0px",
+                    height: showMediaPanel ? "400px" : "0px",
+                    minHeight: showMediaPanel ? "400px" : "0px",
+                    opacity: showMediaPanel ? 1 : 0,
+                    visibility: showMediaPanel ? "visible" : "hidden",
+                    transition: "all 0.3s ease-in-out",
+                    backgroundColor: "rgba(0,0,0,0.8)"
+                }}
+            >
                 <MediaTabs
                     onMediaSelect={(media) => setMediaList((prev) => [...prev, media])}
-                    onMediaDragStart={(media) => {setMediaList((prev) => [...prev, media])}} />
-                    </div>
-
-
-            {/* CENTER COLUMN: Controls (buttons and audio timeline) */}
+                    onMediaDragStart={(media) => { setMediaList((prev) => [...prev, media]) }}
+                />
+            </div>
 
             {showPalette && (
                 <div className="flex-1 p-4 rounded shadow flex flex-col space-y-4 transition-all duration-300 ease-in-out" style={{ minWidth: "600px", backgroundColor: "rgb(0 0 0 / 80%)" }}>
-
-                    {/* Header row: Three groups */}
                     <div className="flex flex-row items-center justify-between">
-                        {/* Left: Toggle buttons */}
                         <div className="flex flex-row gap-2">
-                            <Button onClick={() => setShowVirtualKeyboard((prev) => !prev)} className={`w-10 h-10 text-2xl ${showVirtualKeyboard ? "border-2" : "border-0"}`} title="Toggle Keyboard">
+                            <Button onClick={() => setShowVirtualKeyboard((prev) => !prev)} className={`w-10 h-10 text-2xl ${showVirtualKeyboard ? "border-2" : "border-0"} text-gray-500 hover:bg-gray-700`} title="Toggle Keyboard (F2)">
                                 <i className="fa-solid fa-keyboard"></i>
                             </Button>
-                            <Button onClick={() => setShowUnboundMediaList((prev) => !prev)} className={`w-10 h-10 text-2xl ${showUnboundMediaList ? "border-2" : "border-0"}`} title="Toggle Unbound Media">
+                            <Button onClick={() => setShowUnboundMediaList((prev) => !prev)} className={`w-10 h-10 text-2xl ${showUnboundMediaList ? "border-2" : "border-0"} text-gray-500 hover:bg-gray-700`} title="Toggle Unbound Media (F4)">
                                 <i className="fa-solid fa-box"></i>
                             </Button>
-
-                            <Button onClick={() => setShowMediaPanel((prev) => !prev)} className={`w-10 h-10 text-2xl ${showMediaPanel ? "border-2" : "border-0"}`} title="Toggle Media Panel">
+                            <Button onClick={() => setShowMediaPanel((prev) => !prev)} className={`w-10 h-10 text-2xl ${showMediaPanel ? "border-2" : "border-0"} text-gray-500 hover:bg-gray-700`} title="Toggle Media Panel (F3)">
                                 <i className="fa-solid fa-images"></i>
                             </Button>
-                            <Button onClick={() => setBackgroundEnabled((prev) => !prev)} className={`w-10 h-10 text-2xl ${backgroundEnabled ? "border-2" : "border-0"}`} title="Toggle Matrix Mode">
-                                <i className="fa-solid fa-globe"></i>
+                            <Button onClick={() => setBackgroundEnabled((prev) => !prev)} className={`w-10 h-10 text-2xl ${backgroundEnabled ? "border-2 border-green-500 text-green-500" : "border-0 text-gray-500"} hover:bg-gray-700`} title="Toggle Visualizer (F9)">
+                                <i className="fa-solid fa-music" />
                             </Button>
-                            <Button onClick={() => setEmbeddedMode((prev) => !prev)} className={`w-10 h-10 text-2xl ${embeddedMode ? "border-2" : "border-0"}`} title="Toggle ASCII Mode">
-                                <i className="fa-solid fa-theater-masks"></i>
+                            <Button onClick={toggleMatrixMode} className={`w-10 h-10 text-2xl ${isMatrixModeActive ? "border-2 border-green-500 text-green-500" : "border-0 text-gray-500"} hover:bg-gray-700`} title="Toggle Matrix Mode (F8)">
+                                <i className="fa-solid fa-globe" />
                             </Button>
-                            <Button onClick={toggleAllPanels} className={`w-10 h-10 text-2xl ${showPalette ? "border-2" : "border-0"}`} title="Toggle All">
-                                <i className="fa-solid fa-layer-group"></i>
+                            <Button onClick={toggleAsciiMode} className={`w-10 h-10 text-2xl ${isAsciiModeActive ? "border-2 border-green-500 text-green-500" : "border-0 text-gray-500"} hover:bg-gray-700`} title="Toggle ASCII Mode (F7)">
+                                <i className="fa-solid fa-theater-masks" />
                             </Button>
-                            <Button onClick={handlePlayPause} className="w-10 h-10 text-2xl border-2 border-current text-gray-500" title="Play / Pause">
+                            <Button onClick={toggleAllPanels} className={`w-10 h-10 text-2xl ${showPalette ? "border-2" : "border-0"} text-gray-500 hover:bg-gray-700`} title="Toggle All Panels (Tab)">
+                                <i className="fa-solid fa-layer-group" />
+                            </Button>
+                            <Button
+                                onClick={handleWinampPlayPause}
+                                className={`w-10 h-10 text-2xl ${isPlaying ? "border-2 border-green-500 text-green-500" : "border-0 text-gray-500"} hover:bg-gray-700`}
+                                title="Play / Pause (Space)"
+                            >
                                 {isPlaying ? <i className="fa-solid fa-pause" /> : <i className="fa-solid fa-play" />}
-                            </Button>
-                            <Button onClick={handleStop} className="w-10 h-10 text-2xl border-2 border-current text-gray-500" title="Stop (F9)">
-                                <i className="fa-solid fa-stop" />
                             </Button>
                             <Button
                                 onClick={() => handleZoomChange(0.1)}
                                 title="Zoom In (PageUp)"
-                                className="w-10 h-10 text-2xl border-2 border-current text-gray-500"
+                                className="w-10 h-10 text-2xl border-2 border-current text-gray-500 hover:bg-gray-700"
                             >
                                 <i className="fa-solid fa-plus" />
                             </Button>
                             <Button
                                 onClick={() => handleZoomChange(-0.1)}
                                 title="Zoom Out (PageDown)"
-                                className="w-10 h-10 text-2xl border-2 border-current text-gray-500"
+                                className="w-10 h-10 text-2xl border-2 border-current text-gray-500 hover:bg-gray-700"
                             >
                                 <i className="fa-solid fa-minus" />
                             </Button>
                             <Button
                                 onClick={handleToggleFullscreen}
+                                className="w-10 h-10 text-2xl border-2 border-current text-gray-500 hover:bg-gray-700"
                                 title="Toggle Fullscreen (F11)"
-                                className="w-10 h-10 text-2xl border-2 border-current text-gray-500"
                             >
                                 <i className="fa-solid fa-expand" />
                             </Button>
                             <Button
                                 onClick={() =>
                                     alert(`🔥 Hotkey Guide:
+- Escape: Deselect Element
 - Tab: Toggle All Panels
 - F1: Help
 - F2: Toggle Launchpad Keyboard
@@ -475,25 +483,22 @@ const SkryrToolbar: React.FC<SkryrToolbarProps> = ({
 - F4: Toggle Unbound Media Items
 - F7: Toggle ASCII Mode
 - F8: Toggle Matrix Mode
+- F9: Toggle Visualizer
 - Space: Play/Pause
-- F9: Stop
-- F10: Stop + Play
-- F11: Toggle Fullscreen
+- F11: Fullscreen Toggle
 - PageUp: Zoom In
 - PageDown: Zoom Out
 `)
                                 }
                                 title="Help (F1)"
-                                className="w-10 h-10 text-2xl border-2 border-current text-gray-500"
+                                className="w-10 h-10 text-2xl border-2 border-current text-gray-500 hover:bg-gray-700"
                             >
                                 <i className="fa-solid fa-question" />
                             </Button>
                         </div>
                     </div>
 
-
-                    {/* Audio Timeline */}
-                    <div className="min-w-[150px]" style={{ color: computedColor,  }}>
+                    <div className="min-w-[150px]" style={{ color: computedColor }}>
                         {primaryAudioSrc ? (
                             <div className="flex flex-col">
                                 <span className="text-xs text-center text-gray-600">Audio Timeline</span>
@@ -515,22 +520,20 @@ const SkryrToolbar: React.FC<SkryrToolbarProps> = ({
                                 />
                             </div>
                         ) : (
-<div
-  className="p-2 border-dashed border-2 border-gray-400 rounded text-xs text-center"
-  style={{ borderColor: computedColor }}
-  onDrop={(e) => {
-    e.preventDefault();
-    onPrimaryAudioDrop(e);
-  }}
-  onDragOver={(e) => e.preventDefault()}
->
-  Drag & Drop Primary Audio Here
-</div>
-
+                            <div
+                                className="p-2 border-dashed border-2 border-gray-400 rounded text-xs text-center"
+                                style={{ borderColor: computedColor }}
+                                onDrop={(e) => {
+                                    e.preventDefault();
+                                    onPrimaryAudioDrop(e);
+                                }}
+                                onDragOver={(e) => e.preventDefault()}
+                            >
+                                Drag & Drop Primary Audio Here
+                            </div>
                         )}
                     </div>
 
-                    {/* Launchpad Keyboard */}
                     {showLaunchpad && (
                         <div className={`transition-all duration-300 ease-in-out ${showVirtualKeyboard ? "opacity-100 scale-100 visible" : "opacity-0 scale-90 invisible absolute"}`}>
                             {renderVirtualKeyboardPanel()}
@@ -539,16 +542,12 @@ const SkryrToolbar: React.FC<SkryrToolbarProps> = ({
                 </div>
             )}
 
-
-            {/* 🔹 OPTIONS PANEL (With Animation) */}
             {showPalette && (
                 <div className={`p-4 w-[220px] max-w-[220px] rounded shadow flex flex-col items-center transition-all duration-300 ease-in-out ${showPalette ? "opacity-100 scale-100 visible" : "opacity-0 scale-90 invisible absolute"}`} style={{ backgroundColor: "rgb(0 0 0 / 80%)", color: computedColor }}>
                     {selectedElement ? renderOptionsContent() : <div className="text-xs text-gray-600">Double-click an element for options</div>}
                 </div>
-                        // </div>
             )}
-            
-            {/* Tailwind Animations & Button Styling */}
+
             <style>
                 {`
                 .icon-button {
@@ -563,7 +562,6 @@ const SkryrToolbar: React.FC<SkryrToolbarProps> = ({
                 `}
             </style>
         </div>
-
     );
 };
 
