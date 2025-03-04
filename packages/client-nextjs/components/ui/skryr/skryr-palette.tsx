@@ -1,105 +1,28 @@
+"use client";
+
 import React, { useEffect, useRef, useState } from "react";
+import Slider from "@/components/ui/slider";
+
 interface SkryrPaletteProps {
     isFullscreen: boolean;
-    handleToggleFullscreen: (e?: React.MouseEvent<HTMLDivElement, MouseEvent>) => void;
+    handleToggleFullscreen: (e?: React.MouseEvent<HTMLDivElement>) => void;
     showPalette: boolean;
     setShowPalette: React.Dispatch<React.SetStateAction<boolean>>;
     backgroundEnabled: boolean;
     setBackgroundEnabled: React.Dispatch<React.SetStateAction<boolean>>;
-    embeddedMode: boolean;
-    setEmbeddedMode: React.Dispatch<React.SetStateAction<boolean>>;
     children?: React.ReactNode;
+    computedColor?: string; // Add computedColor as an optional prop
+    setComputedColor?: React.Dispatch<React.SetStateAction<string>>; // Add setter as an optional prop
 }
 
-
-const SkryrPalette: React.FC<SkryrPaletteProps> = ({
-    isFullscreen,
-    handleToggleFullscreen,
-    showPalette,
-    setShowPalette,
-    backgroundEnabled,
-    setBackgroundEnabled,
-    embeddedMode,
-    setEmbeddedMode,
-    children,
-}) => {
-    const paletteRef = useRef<HTMLDivElement>(null);
-    const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
-
-    /*
-     |--------------------------------------------------------------------------
-     | 1) SVG FILTER STATE
-     |--------------------------------------------------------------------------
-     | Controls how the background SVG is filtered.
-     */
-    const [svgHueRotation, setSvgHueRotation] = useState(0); // range 0..360
-    const [svgSaturation, setSvgSaturation] = useState(5);   // range 0..10
-    const [svgSepia, setSvgSepia] = useState(1);             // range 0..1
-    const [svgInvert, setSvgInvert] = useState(1);           // range 0..1
-
-    /*
-     |--------------------------------------------------------------------------
-     | 2) COMPUTED COLOR STATE (HSL)
-     |--------------------------------------------------------------------------
-     | Used for text, borders, etc. of the palette.
-     */
-    const [colorHue, setColorHue] = useState(55);                // 0..360
-    const [colorSaturation, setColorSaturation] = useState(100); // 0..100
-    const [colorLightness, setColorLightness] = useState(50);    // 0..100
-
-    /*
-     |--------------------------------------------------------------------------
-     | 3) PROFILE STRING
-     |--------------------------------------------------------------------------
-     | Store all 7 slider values in a single string:
-     |   [svgHue, svgSat, svgSepia, svgInvert, colorHue, colorSat, colorLight]
-     */
-    const [profile, setProfile] = useState("");
-
-    /*
-     |--------------------------------------------------------------------------
-     | 4) DERIVED STYLES
-     |--------------------------------------------------------------------------
-     */
-    // Filter for the background SVG
-    const svgFilter = `invert(${svgInvert}) sepia(${svgSepia}) saturate(${svgSaturation}) hue-rotate(${svgHueRotation}deg)`;
-
-    // The main color for text, border, etc.
-    const computedColor = `hsl(${colorHue}, ${colorSaturation}%, ${colorLightness}%)`;
-
-    /*
-     |--------------------------------------------------------------------------
-     | 5) DRAGGABLE / POSITION LOGIC
-     |--------------------------------------------------------------------------
-     */
-    useEffect(() => {
-        if (!position) {
-            setPosition({
-                x: window.innerWidth * 0.05,
-                y: window.innerHeight * 0.44 - 100,
-            });
-        }
-    }, [position]);
-
-    useEffect(() => {
-        if (isFullscreen) {
-            setPosition({
-                x: window.innerWidth * 0.05,
-                y: window.innerHeight * 0.55 - 100,
-            });
-        }
-    }, [isFullscreen]);
-
+const usePaletteDrag = (initialPosition: { x: number; y: number } | null, setPosition: (pos: { x: number; y: number }) => void) => {
     const handleDragHandleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-        // Don't drag if the user clicked an input / button
-        if ((e.target as HTMLElement).closest("input, button, select")) {
-            return;
-        }
+        if ((e.target as HTMLElement).closest("input, button, select")) return;
         e.preventDefault();
 
         const startX = e.clientX;
         const startY = e.clientY;
-        const initPos = position ? { ...position } : { x: 0, y: 0 };
+        const initPos = initialPosition ? { ...initialPosition } : { x: 0, y: 0 };
 
         const onMouseMove = (ev: MouseEvent) => {
             const deltaX = ev.clientX - startX;
@@ -119,21 +42,66 @@ const SkryrPalette: React.FC<SkryrPaletteProps> = ({
         window.addEventListener("mouseup", onMouseUp);
     };
 
-    /*
-     |--------------------------------------------------------------------------
-     | 6) SAVE / LOAD PROFILE
-     |--------------------------------------------------------------------------
-     */
+    return { handleDragHandleMouseDown };
+};
+
+const SkryrPalette: React.FC<SkryrPaletteProps> = ({
+    isFullscreen,
+    handleToggleFullscreen,
+    showPalette,
+    setShowPalette,
+    backgroundEnabled,
+    setBackgroundEnabled,
+    children,
+    computedColor: externalComputedColor, // Rename to avoid conflict
+    setComputedColor,
+}) => {
+    const paletteRef = useRef<HTMLDivElement>(null);
+    const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
+
+    const [svgHueRotation, setSvgHueRotation] = useState(0);
+    const [svgSaturation, setSvgSaturation] = useState(5);
+    const [svgSepia, setSvgSepia] = useState(1);
+    const [svgInvert, setSvgInvert] = useState(1);
+    const [colorHue, setColorHue] = useState(55);
+    const [colorSaturation, setColorSaturation] = useState(100);
+    const [colorLightness, setColorLightness] = useState(50);
+    const [profile, setProfile] = useState("");
+    const svgFilter = `invert(${svgInvert}) sepia(${svgSepia}) saturate(${svgSaturation}) hue-rotate(${svgHueRotation}deg)`;
+    const internalComputedColor = `hsl(${colorHue}, ${colorSaturation}%, ${colorLightness}%)`;
+
+    // Use external computedColor if provided, otherwise use internal
+    const computedColor = externalComputedColor || internalComputedColor;
+
+    // Sync internal color state with external setter if provided
+    useEffect(() => {
+        if (setComputedColor && internalComputedColor !== externalComputedColor) {
+            setComputedColor(internalComputedColor);
+        }
+    }, [internalComputedColor, setComputedColor, externalComputedColor]);
+
+    const { handleDragHandleMouseDown } = usePaletteDrag(position, setPosition);
+
+    useEffect(() => {
+        if (!position) {
+            setPosition({
+                x: window.innerWidth * 0.18,
+                y: window.innerHeight * 0.64 - 100,
+            });
+        }
+    }, [position]);
+
+    useEffect(() => {
+        if (isFullscreen) {
+            setPosition({
+                x: window.innerWidth * 0.05,
+                y: window.innerHeight * 0.55 - 100,
+            });
+        }
+    }, [isFullscreen]);
+
     const handleSaveProfile = () => {
-        const saved = [
-            svgHueRotation,
-            svgSaturation,
-            svgSepia,
-            svgInvert,
-            colorHue,
-            colorSaturation,
-            colorLightness,
-        ].join(",");
+        const saved = [svgHueRotation, svgSaturation, svgSepia, svgInvert, colorHue, colorSaturation, colorLightness].join(",");
         setProfile(saved);
     };
 
@@ -153,25 +121,13 @@ const SkryrPalette: React.FC<SkryrPaletteProps> = ({
         setColorLightness(cl);
     };
 
-    /*
-     |--------------------------------------------------------------------------
-     | 7) SHOW/HIDE SLIDERS
-     |--------------------------------------------------------------------------
-     */
     const [showSliders, setShowSliders] = useState(false);
 
-    /*
-     |--------------------------------------------------------------------------
-     | RENDER
-     |--------------------------------------------------------------------------
-     */
     return (
         <div
             ref={paletteRef}
-            // Give the top-level container a class so we can override child styles easily:
             className="fixed z-[100] rounded-lg overflow-hidden flex flex-col SkryrPalette"
             style={{
-                // Use the computedColor as the "color" for the entire palette
                 color: computedColor,
                 backgroundColor: "rgba(0, 0, 0, 0.8)",
                 borderRadius: "10px",
@@ -181,27 +137,17 @@ const SkryrPalette: React.FC<SkryrPaletteProps> = ({
                 width: "max-content",
                 height: "fit-content",
                 display: showPalette ? "flex" : "none",
-                cursor: "default",
             }}
         >
-            {/*
-       * 1) A small <style> to ensure borders, fills, strokes, etc.
-       *    inherit the same color (currentColor) from the parent.
-       */}
-            <style>
-                {`
-          /* Everything inside .SkryrPalette uses 'currentColor' for borders, fill, stroke, etc. */
-          .SkryrPalette * {
-            /* Use '!important' to override typical 'border-color: #fff' or similar. */
-            color: inherit !important;
-            border-color: currentColor !important;
-            fill: currentColor !important;
-            stroke: currentColor !important;
-          }
-        `}
-            </style>
+            <style>{`
+                .SkryrPalette * {
+                    color: inherit !important;
+                    border-color: currentColor !important;
+                    fill: currentColor !important;
+                    stroke: currentColor !important;
+                }
+            `}</style>
 
-            {/* 2) Background SVG with filter */}
             <div
                 className="absolute inset-0 w-full h-full pointer-events-none"
                 style={{
@@ -212,11 +158,6 @@ const SkryrPalette: React.FC<SkryrPaletteProps> = ({
                 }}
             />
 
-            {/*
-        3) The top bar (drag handle):
-           - "SKRYR" on the left
-           - Toggle + Sliders + Profile on the right
-      */}
             <div
                 className="relative flex items-center w-full"
                 onMouseDown={handleDragHandleMouseDown}
@@ -229,138 +170,91 @@ const SkryrPalette: React.FC<SkryrPaletteProps> = ({
                     padding: "4px 8px",
                 }}
             >
-                {/* Left: Label */}
                 <span className="text-sm font-bold" style={{ marginRight: "8px" }}>
                     ☰ SKRYR
                 </span>
 
-                {/* Right: Sliders / Profile / Toggle */}
                 <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                    {/* Toggle Button */}
                     <button
                         onClick={(e) => {
-                            e.stopPropagation(); // prevent drag
+                            e.stopPropagation();
                             setShowSliders((prev) => !prev);
                         }}
-                        style={{
-                            borderColor: computedColor,
-                            color: "#fff",
-                            border: "none",
-                            borderRadius: 4,
-                            padding: "0 6px",
-                            cursor: "pointer",
-                        }}
-                        title={showSliders ? "Hide sliders" : "Show sliders"}
+                        style={{ border: "none", borderRadius: 4, padding: "0 6px", cursor: "pointer" }}
                     >
                         {showSliders ? "–" : "+"}
                     </button>
 
-                    {/* Conditionally show sliders & profile if toggled on */}
                     {showSliders && (
                         <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                            {/* SVG Filter Sliders */}
-                            <input
-                                type="range"
-                                min="0"
-                                max="360"
-                                value={svgHueRotation}
-                                onChange={(e) => setSvgHueRotation(parseInt(e.target.value))}
-                                style={{ backgroundColor: computedColor }}
-                                title={`SVG Hue: ${svgHueRotation}°`}
+                            <Slider
+                                min={0}
+                                max={360}
+                                step={1}
+                                value={[svgHueRotation]}
+                                onValueChange={(value: number[]) => setSvgHueRotation(value[0])}
                             />
-                            <input
-                                type="range"
-                                min="0"
-                                max="10"
-                                step="0.1"
-                                value={svgSaturation}
-                                onChange={(e) => setSvgSaturation(parseFloat(e.target.value))}
-                                style={{ backgroundColor: computedColor }}
-                                title={`SVG Sat: ${svgSaturation}x`}
+                            <Slider
+                                min={0}
+                                max={10}
+                                step={0.1}
+                                value={[svgSaturation]}
+                                onValueChange={(value: number[]) => setSvgSaturation(value[0])}
                             />
-                            <input
-                                type="range"
-                                min="0"
-                                max="1"
-                                step="0.05"
-                                value={svgSepia}
-                                onChange={(e) => setSvgSepia(parseFloat(e.target.value))}
-                                style={{ backgroundColor: computedColor }}
-                                title={`SVG Sepia: ${svgSepia}`}
+                            <Slider
+                                min={0}
+                                max={1}
+                                step={0.05}
+                                value={[svgSepia]}
+                                onValueChange={(value: number[]) => setSvgSepia(value[0])}
                             />
-                            <input
-                                type="range"
-                                min="0"
-                                max="1"
-                                step="0.05"
-                                value={svgInvert}
-                                onChange={(e) => setSvgInvert(parseFloat(e.target.value))}
-                                style={{ backgroundColor: computedColor }}
-                                title={`SVG Invert: ${svgInvert}`}
+                            <Slider
+                                min={0}
+                                max={1}
+                                step={0.05}
+                                value={[svgInvert]}
+                                onValueChange={(value: number[]) => setSvgInvert(value[0])}
                             />
-
-                            {/* Computed Color Sliders */}
-                            <input
-                                type="range"
-                                min="0"
-                                max="360"
-                                value={colorHue}
-                                onChange={(e) => setColorHue(parseInt(e.target.value))}
-                                style={{ backgroundColor: computedColor }}
-                                title={`Color Hue: ${colorHue}°`}
+                            <Slider
+                                min={0}
+                                max={360}
+                                step={1}
+                                value={[colorHue]}
+                                onValueChange={(value: number[]) => setColorHue(value[0])}
                             />
-                            <input
-                                type="range"
-                                min="0"
-                                max="100"
-                                value={colorSaturation}
-                                onChange={(e) => setColorSaturation(parseInt(e.target.value))}
-                                style={{ backgroundColor: computedColor }}
-                                title={`Color Saturation: ${colorSaturation}%`}
+                            <Slider
+                                min={0}
+                                max={100}
+                                step={1}
+                                value={[colorSaturation]}
+                                onValueChange={(value: number[]) => setColorSaturation(value[0])}
                             />
-                            <input
-                                type="range"
-                                min="0"
-                                max="100"
-                                value={colorLightness}
-                                onChange={(e) => setColorLightness(parseInt(e.target.value))}
-                                style={{ backgroundColor: computedColor }}
-                                title={`Color Lightness: ${colorLightness}%`}
+                            <Slider
+                                min={0}
+                                max={100}
+                                step={1}
+                                value={[colorLightness]}
+                                onValueChange={(value: number[]) => setColorLightness(value[0])}
                             />
-
-                            {/* Profile Input + Save/Load Buttons */}
                             <input
                                 type="text"
                                 value={profile}
                                 onChange={(e) => setProfile(e.target.value)}
                                 placeholder="Profile"
                                 className="text-xs px-1 py-0.5 rounded border border-gray-300"
-                                style={{
-                                    // Inherit the palette color, but set background transparent
-                                    backgroundColor: "transparent",
-                                    color: "inherit",
-                                    borderColor: "currentColor",
-                                }}
+                                style={{ backgroundColor: "transparent", color: "inherit", borderColor: "currentColor" }}
                             />
                             <button
                                 onClick={handleSaveProfile}
                                 className="px-1 py-0.5 text-xs rounded"
-                                style={{
-                                    backgroundColor: computedColor,
-                                    color: "#fff",
-                                }}
-                                title="Save Profile"
+                                style={{ backgroundColor: computedColor, color: "#fff" }}
                             >
                                 💾
                             </button>
                             <button
                                 onClick={handleLoadProfile}
                                 className="px-1 py-0.5 text-xs rounded"
-                                style={{
-                                    backgroundColor: computedColor,
-                                    color: "#fff",
-                                }}
-                                title="Load Profile"
+                                style={{ backgroundColor: computedColor, color: "#fff" }}
                             >
                                 🔄
                             </button>
@@ -369,7 +263,6 @@ const SkryrPalette: React.FC<SkryrPaletteProps> = ({
                 </div>
             </div>
 
-            {/* 4) The main content area */}
             <div className="relative z-10 w-full" style={{ padding: "8px" }}>
                 {children}
             </div>

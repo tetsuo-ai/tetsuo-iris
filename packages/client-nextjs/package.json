@@ -30,9 +30,7 @@
     "react-dom": "^18",
     "sonner": "^1.7.1",
     "tailwind-merge": "^2.6.0",
-    "tailwindcss-animate": "^1.0.7",
-    "webamp": "0.0.0-next-bd2022a8",
-    "winamp2-js": "^0.0.6"
+    "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
     "@types/node": "^20",
