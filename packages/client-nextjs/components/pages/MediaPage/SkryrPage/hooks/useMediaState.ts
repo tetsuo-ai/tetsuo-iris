@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import AsciiArt from "@/components/ui/asciis";
 
 export interface MediaItem {
+    [x: string]: any;
     type: "image" | "video" | "audio";
     src: string;
     x: number;
@@ -58,13 +59,13 @@ export const useMediaState = (isFullscreen: boolean) => {
 
     const [keyMappings, setKeyMappings] = useState<KeyMapping[]>(buildDefaultMappings());
 
-    // Initialize default media items
+    // Initialize default media items with external URLs
     useEffect(() => {
         if (mediaList.length === 0) {
             const defaultMedia: MediaItem[] = [
                 {
                     type: "image",
-                    src: "https://eaccelerate.me/tetsuo/tetsuo-unit-frame.gif",
+                    src: "https://eaccelerate.me/tetsuo/tetsuo-unit-frame.gif", // Restored external URL
                     x: 90,
                     y: 10,
                     scale: 1,
@@ -77,7 +78,7 @@ export const useMediaState = (isFullscreen: boolean) => {
                 },
                 {
                     type: "image",
-                    src: "https://eaccelerate.me/tetsuo/launchpad-SKRYR.gif",
+                    src: "https://eaccelerate.me/tetsuo/launchpad-SKRYR.gif", // Restored external URL
                     x: 50,
                     y: 50,
                     scale: 1,

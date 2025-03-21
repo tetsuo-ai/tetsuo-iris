@@ -1,11 +1,10 @@
+// useMatrixEffect.ts
 import { useEffect, useRef } from "react";
 
 export const useMatrixEffect = (
     matrixEnabled: boolean,
     canvasRef: React.RefObject<HTMLCanvasElement>,
-    audioData: Uint8Array,
-    isFullscreen: boolean,
-    isPlaying: boolean
+    isFullscreen: boolean
 ) => {
     const animationFrameIdRef = useRef<number | null>(null);
     const lastFrameTimeRef = useRef<number>(0);
@@ -29,38 +28,21 @@ export const useMatrixEffect = (
         resizeCanvas();
         window.addEventListener("resize", resizeCanvas);
 
-        const fontSize = 16;
+        const fontSize = 22;
         const width = canvas.width / (window.devicePixelRatio || 1);
         const height = canvas.height / (window.devicePixelRatio || 1);
-        const columns = Math.floor(width / fontSize);
-        const drops = Array(columns)
-            .fill(0)
-            .map(() => ({
-                y: Math.random() * height / fontSize,
-                alpha: 1,
-                life: 60 + Math.random() * 40,
-            }));
 
-        const commonLyrics = ["SKRYR", "TETSUO", "SYSTEM ONLINE"];
-        const rareLyrics = ["Neon hums", "Press play"];
-        let activeLyrics: { text: string; x: number; y: number; life: number; alpha: number }[] = [];
-        const lyricDuration = 44;
-        const baseFallSpeed = 0.5;
-        let lastCommonLyricTime = Date.now();
-        let lastRareLyricTime = Date.now();
-
-        const getBoundedX = (text: string): number => {
-            const textWidth = ctx.measureText(text).width;
-            return Math.max(0, Math.min(width - textWidth, Math.random() * (width - textWidth)));
-        };
-
-        const getBoundedY = (): number => Math.max(fontSize, Math.random() * (height - fontSize * 2));
-
-        const getAudioIntensity = (): number => {
-            if (!audioData.length) return 0;
-            const average = audioData.reduce((a, b) => a + b, 0) / audioData.length;
-            return average / 255;
-        };
+        const particles = Array(50).fill(0).map(() => ({
+            x: width / 2,
+            y: height / 2,
+            angle: Math.random() * Math.PI * 2,
+            radius: Math.random() * Math.min(width, height) / 4,
+            speed: 0.5,
+            char: String.fromCharCode(33 + Math.random() * 94),
+            alpha: 1,
+            trail: [] as { x: number; y: number; alpha: number }[],
+            mode: Math.floor(Math.random() * 3)
+        }));
 
         const renderMatrix = (timestamp: number) => {
             if (timestamp - lastFrameTimeRef.current < 16.67) {
@@ -69,55 +51,57 @@ export const useMatrixEffect = (
             }
             lastFrameTimeRef.current = timestamp;
 
-            const audioIntensity = getAudioIntensity();
-
-            ctx.clearRect(0, 0, width, height); // Ensure full transparency
-            // console.log("Matrix canvas cleared"); // Debug log
+            ctx.clearRect(0, 0, width, height);
 
             ctx.font = `${fontSize}px monospace`;
-            const fallSpeed = baseFallSpeed + audioIntensity * 1.5;
 
-            for (let i = 0; i < drops.length; i++) {
-                if (drops[i].alpha > 0) {
-                    const text = String.fromCharCode(33 + Math.random() * 94);
-                    const dynamicAlpha = Math.max(drops[i].alpha, audioIntensity);
-                    ctx.fillStyle = `rgba(0, 255, 0, ${dynamicAlpha})`;
-                    ctx.fillText(text, i * fontSize, drops[i].y * fontSize);
+            particles.forEach((particle) => {
+                let newX = particle.x;
+                let newY = particle.y;
 
-                    drops[i].y += fallSpeed;
-                    drops[i].life--;
-                    drops[i].alpha = Math.max(0, drops[i].life / 60);
-
-                    if (drops[i].life <= 0 || drops[i].y * fontSize > height) {
-                        drops[i].y = 0;
-                        drops[i].alpha = 1;
-                        drops[i].life = 60 + Math.random() * 40;
-                    }
+                switch (particle.mode) {
+                    case 0: // Orbit
+                        particle.angle += particle.speed / fontSize;
+                        newX = width / 2 + Math.cos(particle.angle) * particle.radius;
+                        newY = height / 2 + Math.sin(particle.angle) * particle.radius;
+                        break;
+                    case 1: // Wave
+                        particle.angle += particle.speed / fontSize;
+                        newX = particle.x + Math.sin(particle.angle) * 20;
+                        newY = particle.y + Math.cos(particle.angle * 2) * particle.radius * 0.5;
+                        if (newY > height || newY < 0) particle.y = height / 2;
+                        break;
+                    case 2: // Spiral
+                        particle.angle += particle.speed / fontSize;
+                        particle.radius *= 0.995;
+                        newX = width / 2 + Math.cos(particle.angle) * particle.radius;
+                        newY = height / 2 + Math.sin(particle.angle) * particle.radius;
+                        if (particle.radius < 10) {
+                            particle.radius = Math.min(width, height) / 4;
+                            particle.angle = Math.random() * Math.PI * 2;
+                        }
+                        break;
                 }
-            }
 
-            activeLyrics.forEach((lyric) => {
-                lyric.alpha = Math.max(0, lyric.life / lyricDuration) * (1 + audioIntensity);
-                ctx.fillStyle = `rgba(0, 255, 0, ${lyric.alpha})`;
-                ctx.fillText(lyric.text, lyric.x, lyric.y);
-                lyric.life--;
+                particle.x = newX;
+                particle.y = newY;
+
+                particle.trail.unshift({ x: particle.x, y: particle.y, alpha: particle.alpha });
+                if (particle.trail.length > 15) particle.trail.pop();
+
+                particle.trail.forEach((trailPos, index) => {
+                    const trailAlpha = trailPos.alpha * (1 - index / 15);
+                    ctx.fillStyle = `rgba(0, 255, 0, ${trailAlpha})`;
+                    ctx.fillText(particle.char, trailPos.x, trailPos.y);
+                });
+
+                if (Math.random() < 0.02) {
+                    particle.char = String.fromCharCode(33 + Math.random() * 94);
+                }
+
+                if (particle.x < 0 || particle.x > width) particle.x = width / 2;
+                if (particle.y < 0 || particle.y > height) particle.y = height / 2;
             });
-
-            activeLyrics = activeLyrics.filter((lyric) => lyric.life > 0);
-
-            const now = Date.now();
-            if (activeLyrics.length < 3 && isPlaying) {
-                if (now - lastCommonLyricTime > 3000 + Math.random() * 3000) {
-                    lastCommonLyricTime = now;
-                    const text = commonLyrics[Math.floor(Math.random() * commonLyrics.length)];
-                    activeLyrics.push({ text, x: getBoundedX(text), y: getBoundedY(), life: lyricDuration, alpha: 1 });
-                }
-                if (now - lastRareLyricTime > 8000 + Math.random() * 7000) {
-                    lastRareLyricTime = now;
-                    const text = rareLyrics[Math.floor(Math.random() * rareLyrics.length)];
-                    activeLyrics.push({ text, x: getBoundedX(text), y: getBoundedY(), life: lyricDuration, alpha: 1 });
-                }
-            }
 
             animationFrameIdRef.current = requestAnimationFrame(renderMatrix);
         };
@@ -133,5 +117,5 @@ export const useMatrixEffect = (
                 ctx.clearRect(0, 0, width, height);
             }
         };
-    }, [matrixEnabled, audioData, isFullscreen, isPlaying]);
+    }, [matrixEnabled, isFullscreen]);
 };

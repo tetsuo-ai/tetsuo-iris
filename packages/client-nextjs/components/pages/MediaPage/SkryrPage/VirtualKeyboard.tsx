@@ -76,6 +76,8 @@ export const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
                         onDragOver={(e) => e.preventDefault()}
                         onDrop={(e) => {
                             e.preventDefault();
+
+                            // Handle mapping index swap
                             const srcMappingIndexStr = e.dataTransfer.getData("mapping-index");
                             if (srcMappingIndexStr) {
                                 const srcIdx = parseInt(srcMappingIndexStr, 10);
@@ -84,6 +86,8 @@ export const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
                                 setKeyMappings(newMappings);
                                 return;
                             }
+
+                            // Handle existing media index
                             const mediaIndexData = e.dataTransfer.getData("application/x-media-index");
                             if (mediaIndexData) {
                                 const mediaIndex = parseInt(mediaIndexData, 10);
@@ -96,11 +100,51 @@ export const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
                                     return;
                                 }
                             }
+
+                            // Handle local file drop
+                            const files = e.dataTransfer.files;
+                            if (files && files.length > 0) {
+                                const file = files[0];
+                                const fileType = file.type;
+                                let newType: MediaItem["type"] = "image";
+
+                                if (fileType.startsWith("video/")) newType = "video";
+                                else if (fileType.startsWith("audio/")) newType = "audio";
+                                else if (fileType.startsWith("image/")) newType = "image";
+
+                                const src = URL.createObjectURL(file);
+                                const newMedia: MediaItem = {
+                                    type: newType,
+                                    src: src,
+                                    x: 50,
+                                    y: 50,
+                                    scale: 1,
+                                    rotation: 0,
+                                    opacity: 1,
+                                    visible: true,
+                                    showAt: 0,
+                                    hideAt: 120,
+                                    interruptOnPlay: true,
+                                };
+
+                                const newList = [...mediaList, newMedia];
+                                setMediaList(newList);
+                                const newMappings = [...keyMappings];
+                                newMappings[mappingIndex].assignedIndex = newList.length - 1;
+                                newMappings[mappingIndex].mappingType = newType === "audio" ? "audio" : "media";
+                                newMappings[mappingIndex].mode = "toggle";
+                                setKeyMappings(newMappings);
+                                return;
+                            }
+
+                            // Handle web URL drop
                             const textData = e.dataTransfer.getData("text/plain");
                             if (textData && textData.startsWith("http")) {
                                 let newType: MediaItem["type"] = "image";
                                 if (textData.match(/\.(jpeg|jpg|png|gif)$/i)) newType = "image";
                                 else if (textData.match(/\.(mp4|webm)$/i)) newType = "video";
+                                else if (textData.match(/\.(mp3|wav)$/i)) newType = "audio";
+
                                 const newMedia: MediaItem = {
                                     type: newType,
                                     src: textData,
@@ -118,7 +162,7 @@ export const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
                                 setMediaList(newList);
                                 const newMappings = [...keyMappings];
                                 newMappings[mappingIndex].assignedIndex = newList.length - 1;
-                                newMappings[mappingIndex].mappingType = "media";
+                                newMappings[mappingIndex].mappingType = newType === "audio" ? "audio" : "media";
                                 newMappings[mappingIndex].mode = "toggle";
                                 setKeyMappings(newMappings);
                             }
