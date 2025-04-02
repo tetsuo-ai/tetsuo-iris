@@ -5,32 +5,26 @@ import dynamic from "next/dynamic";
 import Workspace from "./Workspace";
 import { useEffects } from "./hooks/useEffects";
 import { WebampMilkdrop, WebampMilkdropProps } from "./WebampMilkdrop";
-import VirtualKeyboard, { KeyMapping, MediaItem } from "./VirtualKeyboard";
+import VirtualKeyboard, { KeyMapping, MediaItem, MediaItem as VirtualKeyboardMediaItem } from "./VirtualKeyboard";
 import { useFullscreen } from "./hooks/useFullscreen";
 import { useMediaState, CustomTextItem } from "./hooks/useMediaState";
 import { useDrag } from "./hooks/useDrag";
-import { useAudioSetup } from "./audioSetup";
+import AsioAudioProcessor from "./AsioAudioProcess";
 import { Button } from "@/components/ui/button";
 import Slider from "@/components/ui/slider";
 import { FFmpeg } from '@ffmpeg/ffmpeg';
+import type { ExtendedMediaItem } from "@/components/pages/MediaPage/SkryrPage/ui/skryr-toolbar";
 
 const clamp = (val: number, min: number, max: number) => Math.max(min, Math.min(max, val));
 
-const SkryrToolbar = dynamic(() => import("@/components/ui/skryr/skryr-toolbar"), { ssr: false });
-const SkryrPalette = dynamic(() => import("@/components/ui/skryr/skryr-palette"), { ssr: false });
+const SkryrToolbar = dynamic(() => import("@/components/pages/MediaPage/SkryrPage/ui/skryr-toolbar"), { ssr: false });
+const SkryrPalette = dynamic(() => import("@/components/pages/MediaPage/SkryrPage/ui/skryr-palette"), { ssr: false });
 
-// Type definitions
 type SelectedElement = { type: "media" | "customText"; index: number } | null;
-type SelectedLayer = "milkdrop" | "matrix" | "ascii" | "allMedia" | "background" | null; // Added "background"
+type SelectedLayer = "milkdrop" | "matrix" | "ascii" | "allMedia" | "background" | null;
 type MixBlendMode = "normal" | "multiply" | "screen" | "overlay" | "darken" | "lighten" |
     "color-dodge" | "color-burn" | "hard-light" | "soft-light" | "difference" |
     "exclusion" | "hue" | "saturation" | "color" | "luminosity";
-
-interface ExtendedMediaItem extends MediaItem {
-    showControls?: boolean;
-    mixBlendMode?: MixBlendMode;
-    optimizedSrc?: string;
-}
 
 interface SkryrPageProps {
     backgroundEnabled?: boolean;
@@ -71,7 +65,6 @@ const defaultMediaItems: ExtendedMediaItem[] = [
 ];
 
 const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
-    // State grouped by category
     const [isClient, setIsClient] = useState(false);
     const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
     const [isPlaying, setIsPlaying] = useState(false);
@@ -79,19 +72,16 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
     const [webampReady, setWebampReady] = useState(false);
     const [audioReady, setAudioReady] = useState(false);
     const [countdown, setCountdown] = useState<number>(5);
-
     const [matrixEnabled, setMatrixEnabled] = useState(true);
     const [asciiEnabled, setAsciiEnabled] = useState(true);
     const [visualizerEnabled, setVisualizerEnabled] = useState(backgroundEnabled);
     const [showWinamp, setShowWinamp] = useState(false);
-
     const [showGiphyKeyboard, setShowGiphyKeyboard] = useState(true);
     const [showVirtualKeyboard, setShowVirtualKeyboard] = useState(true);
     const [showMediaPanel, setShowMediaPanel] = useState(true);
     const [showUnboundMediaList, setShowUnboundMediaList] = useState(true);
     const [showPalette, setShowPalette] = useState(true);
-    const [showLayerPanel, setShowLayerPanel] = useState(true); // Start with layer panel open
-
+    const [showLayerPanel, setShowLayerPanel] = useState(true);
     const [selectedElement, setSelectedElement] = useState<SelectedElement>(null);
     const [selectedLayer, setSelectedLayer] = useState<SelectedLayer>(null);
     const [audioData, setAudioData] = useState<Uint8Array>(new Uint8Array(32));
@@ -100,30 +90,25 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
     const [fps, setFps] = useState(0);
     const [activeMediaIndex, setActiveMediaIndex] = useState<number | null>(null);
     const [computedColor, setComputedColor] = useState("#00ff00");
-
     const [matrixMixBlendMode, setMatrixMixBlendMode] = useState<MixBlendMode>("screen");
     const [asciiMixBlendMode, setAsciiMixBlendMode] = useState<MixBlendMode>("normal");
     const [allMediaMixBlendMode, setAllMediaMixBlendMode] = useState<MixBlendMode>("normal");
     const [backgroundMixBlendMode, setBackgroundMixBlendMode] = useState<MixBlendMode>("normal");
-
     const [milkdropOpacity, setMilkdropOpacity] = useState<number>(1);
     const [matrixOpacity, setMatrixOpacity] = useState<number>(1);
     const [asciiOpacity, setAsciiOpacity] = useState<number>(1);
     const [allMediaOpacity, setAllMediaOpacity] = useState<number>(1);
     const [backgroundOpacity, setBackgroundOpacity] = useState<number>(0);
-
     const [milkdropGamma, setMilkdropGamma] = useState<number>(1);
     const [matrixGamma, setMatrixGamma] = useState<number>(1);
     const [asciiGamma, setAsciiGamma] = useState<number>(1);
     const [allMediaGamma, setAllMediaGamma] = useState<number>(1);
     const [backgroundGamma, setBackgroundGamma] = useState<number>(1);
-
     const [milkdropSaturation, setMilkdropSaturation] = useState<number>(1);
     const [matrixSaturation, setMatrixSaturation] = useState<number>(1);
     const [asciiSaturation, setAsciiSaturation] = useState<number>(1);
     const [allMediaSaturation, setAllMediaSaturation] = useState<number>(1);
     const [backgroundSaturation, setBackgroundSaturation] = useState<number>(1);
-
     const [layerOrder, setLayerOrder] = useState<string[]>(["background", "matrix", "milkdrop", "ascii", "allMedia"]);
     const [backgroundColor, setBackgroundColor] = useState<string>("#000000");
     const [backgroundMedia, setBackgroundMedia] = useState<string | null>(null);
@@ -133,38 +118,443 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
     const [backgroundY, setBackgroundY] = useState<number>(0);
     const [backgroundLoop, setBackgroundLoop] = useState<boolean>(true);
     const [backgroundAutoplay, setBackgroundAutoplay] = useState<boolean>(true);
-
     const [isRecording, setIsRecording] = useState(false);
+    const [isStreaming, setIsStreaming] = useState(false);
     const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+    const [peerConnection, setPeerConnection] = useState<RTCPeerConnection | null>(null);
+    const [useAsioProcessing, setUseAsioProcessing] = useState<boolean>(true);
+    const [webampAudioElement, setWebampAudioElement] = useState<HTMLAudioElement | null>(null);
+    const [volume, setVolume] = useState<number>(1);
+    const [eqFrequency, setEqFrequency] = useState<number>(1000);
+    const [eqGain, setEqGain] = useState<number>(0);
+    const [showAudioPanel, setShowAudioPanel] = useState(false);
+    const [media404List, setMedia404List] = useState<string[]>([]);
+    const [isPreparingFile, setIsPreparingFile] = useState<boolean>(false);
+    const [prepStatus, setPrepStatus] = useState<"preparing" | "done" | "fucked" | null>(null);
+    const [isFFmpegLoaded, setIsFFmpegLoaded] = useState(false);
+
+    const [streamBitrate, setStreamBitrate] = useState(2500000);
+    const [streamResolution, setStreamResolution] = useState("1920x1080");
+    const [streamServerUrl, setStreamServerUrl] = useState("");
+    const [streamKey, setStreamKey] = useState("");
+
     const recordedChunksRef = useRef<Blob[]>([]);
     const ffmpegRef = useRef<FFmpeg | null>(null);
-
-    // Refs
     const audioRef = useRef<HTMLAudioElement>(null);
+    const asioAudioRef = useRef<HTMLAudioElement>(null);
     const matrixCanvasRef = useRef<HTMLCanvasElement>(null);
     const barCanvasRef = useRef<HTMLCanvasElement>(null);
     const visualizerCanvasRef = useRef<HTMLCanvasElement>(null);
     const backgroundCanvasRef = useRef<HTMLCanvasElement>(null);
     const backgroundVideoRef = useRef<HTMLVideoElement>(null);
+    const processorRef = useRef<AsioAudioProcessor | null>(null);
 
-    // Hooks
     const { isFullscreen, workspaceDimensions, handleToggleFullscreen } = useFullscreen();
-    const { mediaList, setMediaList, customTexts, setCustomTexts, keyMappings, setKeyMappings } =
+    const { mediaList: baseMediaList, setMediaList: setBaseMediaList, customTexts, setCustomTexts, keyMappings, setKeyMappings } =
         useMediaState(isFullscreen);
 
-    const { onImageMouseDown, onCustomTextMouseDown } = useDrag(mediaList, customTexts, setMediaList, setCustomTexts);
-    const { audioContext, analyser } = useAudioSetup(audioRef.current);
+    // Cast mediaList to ExtendedMediaItem[] and ensure setMediaList matches
+    const mediaList = baseMediaList as ExtendedMediaItem[];
+    const setMediaList = setBaseMediaList as React.Dispatch<React.SetStateAction<ExtendedMediaItem[]>>;
+    
+    // Filter for useDrag to match MediaItem
+    const mediaListForDrag: MediaItem[] = mediaList
+        .filter((item) => ["audio", "video", "image"].includes(item.type))
+        .map((item) => ({
+            type: item.type as "audio" | "video" | "image",
+            src: item.src,
+            x: item.x,
+            y: item.y,
+            scale: item.scale,
+            rotation: item.rotation,
+            visible: item.visible,
+            interruptOnPlay: item.interruptOnPlay,
+            isManuallyControlled: item.isManuallyControlled,
+            showAt: item.showAt,
+            hideAt: item.hideAt,
+            opacity: 1
+        }));
 
-    const [isPreparingFile, setIsPreparingFile] = useState<boolean>(false);
-    const [prepStatus, setPrepStatus] = useState<"preparing" | "done" | "fucked" | null>(null);
+    const { onImageMouseDown, onCustomTextMouseDown } = useDrag(
+        mediaListForDrag, // Use filtered list
+        customTexts,
+        setMediaList as React.Dispatch<React.SetStateAction<MediaItem[]>>, // Adjust type for useDrag
+        setCustomTexts
+    );
 
+    useEffect(() => {
+        let asioAudio: HTMLAudioElement | null = null;
 
-    // Effects
+        if (!useAsioProcessing) {
+            if (processorRef.current) {
+                processorRef.current.dispose();
+                processorRef.current = null;
+            }
+            if (audioRef.current) {
+                audioRef.current.muted = false;
+                audioRef.current.volume = volume;
+            }
+            document.querySelectorAll("audio").forEach((el) => {
+                const mediaEl = el as HTMLMediaElement;
+                if (mediaEl !== audioRef.current) {
+                    mediaEl.muted = false;
+                }
+            });
+            setAudioReady(true);
+            return;
+        }
+
+        if (!processorRef.current) {
+            processorRef.current = new AsioAudioProcessor();
+        }
+
+        asioAudio = new Audio();
+        asioAudio.className = "hidden";
+        document.body.appendChild(asioAudio);
+
+        if (!processorRef.current.isMediaElementConnected(asioAudio)) {
+            processorRef.current.connectMediaElement(asioAudio);
+            asioAudio.muted = false;
+            processorRef.current.setVolume(volume);
+            if (audioRef.current && audioRef.current.src) {
+                asioAudio.src = audioRef.current.src;
+                if (isPlaying) {
+                    asioAudio.play().catch((err) => console.error("ASIO play error:", err));
+                }
+            }
+        } else {
+            processorRef.current.setVolume(volume);
+        }
+
+        if (backgroundVideoRef.current && !processorRef.current.isMediaElementConnected(backgroundVideoRef.current)) {
+            processorRef.current.connectMediaElement(backgroundVideoRef.current);
+        }
+        mediaList.forEach((item, index) => {
+            const videoElement = document.querySelector(`#media-video-${index}`) as HTMLMediaElement;
+            if (videoElement && !processorRef.current!.isMediaElementConnected(videoElement)) {
+                processorRef.current!.connectMediaElement(videoElement);
+            }
+        });
+
+        document.querySelectorAll("#webamp-container audio").forEach((el) => {
+            const mediaEl = el as HTMLMediaElement;
+            if (mediaEl !== audioRef.current && mediaEl !== asioAudio) {
+                mediaEl.muted = true;
+                mediaEl.pause();
+            }
+        });
+
+        setAudioReady(true);
+
+        return () => {
+            if (processorRef.current) {
+                processorRef.current.dispose();
+                processorRef.current = null;
+            }
+            if (audioRef.current) {
+                audioRef.current.muted = false;
+            }
+            if (asioAudio) {
+                document.body.removeChild(asioAudio);
+                asioAudio = null;
+            }
+        };
+    }, [useAsioProcessing, mediaList, volume, isPlaying]);
+
+    const handleClearAllMedia = useCallback(() => {
+        setMediaList([]);
+        setSelectedElement(null);
+        setActiveMediaIndex(null);
+    }, [setMediaList]);
+
+    const handleClear404Media = useCallback(() => {
+        setMediaList(prev => prev.filter(item => !media404List.includes(item.src)));
+        setMedia404List([]);
+    }, [setMediaList, media404List]);
+
+    const toggleRecording = useCallback(async () => {
+        if (!isRecording && !isStreaming) {
+            try {
+                const stream = await navigator.mediaDevices.getDisplayMedia({
+                    video: { displaySurface: "monitor" },
+                    audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 44100 },
+                });
+
+                const recorder = new MediaRecorder(stream, {
+                    mimeType: "video/webm;codecs=vp8,opus",
+                    videoBitsPerSecond: 2500000,
+                    audioBitsPerSecond: 128000,
+                });
+                setMediaRecorder(recorder);
+                recordedChunksRef.current = [];
+                setIsPreparingFile(false);
+                setPrepStatus(null);
+
+                recorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) {
+                        recordedChunksRef.current.push(e.data);
+                    }
+                };
+
+                recorder.onstop = async () => {
+                    setIsPreparingFile(true);
+                    setPrepStatus("preparing");
+
+                    const webmBlob = new Blob(recordedChunksRef.current, { type: "video/webm" });
+                    if (ffmpegRef.current && ffmpegRef.current.loaded) {
+                        try {
+                            const webmArrayBuffer = await webmBlob.arrayBuffer();
+                            await ffmpegRef.current.writeFile("input.webm", new Uint8Array(webmArrayBuffer));
+                            await ffmpegRef.current.exec([
+                                "-i", "input.webm",
+                                "-c:v", "libx264",
+                                "-c:a", "aac",
+                                "-b:v", "2500k",
+                                "-b:a", "128k",
+                                "-preset", "fast",
+                                "output.mp4",
+                            ]);
+                            const mp4Data = (await ffmpegRef.current.readFile("output.mp4")) as Uint8Array;
+                            const mp4Blob = new Blob([mp4Data], { type: "video/mp4" });
+                            const url = URL.createObjectURL(mp4Blob);
+                            setPrepStatus("done");
+                            const a = document.createElement("a");
+                            a.href = url;
+                            a.download = `recording-${Date.now()}.mp4`;
+                            a.click();
+                            URL.revokeObjectURL(url);
+                            await ffmpegRef.current.deleteFile("input.webm");
+                            await ffmpegRef.current.deleteFile("output.mp4");
+                        } catch (err) {
+                            console.error("FFmpeg conversion failed:", err);
+                            setPrepStatus("fucked");
+                        }
+                    } else {
+                        const url = URL.createObjectURL(webmBlob);
+                        setPrepStatus("done");
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.download = `recording-${Date.now()}.webm`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                    }
+                    stream.getTracks().forEach(track => track.stop());
+                    setMediaRecorder(null);
+                    recordedChunksRef.current = [];
+                    setTimeout(() => {
+                        setIsPreparingFile(false);
+                        setPrepStatus(null);
+                    }, 2000);
+                };
+
+                recorder.start(500);
+                setIsRecording(true);
+            } catch (err) {
+                console.error("Error starting recording:", err);
+                setIsRecording(false);
+            }
+        } else if (mediaRecorder && mediaRecorder.state !== "inactive") {
+            mediaRecorder.stop();
+            setIsRecording(false);
+        }
+    }, [isRecording, mediaRecorder, isStreaming]);
+
+    const renderAudioControls = useCallback(() => (
+        <div className={`flex flex-col gap-6 p-6 bg-gray-800 rounded-lg shadow-lg border border-gray-700 animate-panel`}>
+            <div className="flex flex-col gap-4">
+                <div className="flex gap-4">
+                    <Button
+                        onClick={toggleRecording}
+                        className="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors"
+                        style={{ backgroundColor: isRecording ? computedColor : "gray" }}
+                    >
+                        <i className={`fa-solid ${isRecording ? "fa-stop" : "fa-video"}`} />
+                    </Button>
+                </div>
+            </div>
+
+            <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-4">
+                    <Button
+                        onClick={() => setUseAsioProcessing(prev => !prev)}
+                        className="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors"
+                        style={{ backgroundColor: useAsioProcessing ? computedColor : "gray" }}
+                    >
+                        <i className={`fa-solid ${useAsioProcessing ? "fa-volume-high" : "fa-volume-xmark"}`} />
+                    </Button>
+                    <Slider
+                        min={0}
+                        max={1}
+                        step={0.01}
+                        value={[volume]}
+                        onValueChange={(value) => {
+                            setVolume(value[0]);
+                            if (useAsioProcessing && processorRef.current) {
+                                processorRef.current.setVolume(value[0]);
+                            } else if (audioRef.current) {
+                                audioRef.current.volume = value[0];
+                            }
+                        }}
+                        className="w-40"
+                        style={{ accentColor: computedColor }}
+                        showTooltip={true}
+                    />
+                </div>
+                {useAsioProcessing && (
+                    <>
+                        <div className="flex items-center gap-4">
+                            <Slider
+                                min={20}
+                                max={20000}
+                                step={10}
+                                value={[eqFrequency]}
+                                onValueChange={(value) => {
+                                    setEqFrequency(value[0]);
+                                    if (processorRef.current) {
+                                        processorRef.current.setEqualizer(value[0], eqGain);
+                                    }
+                                }}
+                                className="w-40"
+                                style={{ accentColor: computedColor }}
+                                showTooltip={true}
+                            />
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <Slider
+                                min={-12}
+                                max={12}
+                                step={0.1}
+                                value={[eqGain]}
+                                onValueChange={(value) => {
+                                    setEqGain(value[0]);
+                                    if (processorRef.current) {
+                                        processorRef.current.setEqualizer(eqFrequency, value[0]);
+                                    }
+                                }}
+                                className="w-40"
+                                style={{ accentColor: computedColor }}
+                                showTooltip={true}
+                            />
+                        </div>
+                    </>
+                )}
+            </div>
+
+            <div className="flex flex-col gap-4">
+                <div className="flex gap-4">
+                    <Button
+                        onClick={handleClearAllMedia}
+                        className="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors"
+                        style={{ backgroundColor: computedColor }}
+                    >
+                        <i className="fa-solid fa-eraser" />
+                    </Button>
+                    <Button
+                        onClick={handleClear404Media}
+                        className="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors"
+                        style={{ backgroundColor: computedColor }}
+                    >
+                        <i className="fa-solid fa-trash" />
+                    </Button>
+                </div>
+            </div>
+
+            <div className="flex flex-col gap-4">
+                <div className="flex gap-4">
+                    <Button
+                        onClick={handleToggleFullscreen}
+                        className="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors"
+                        style={{ backgroundColor: computedColor }}
+                    >
+                        <i className={`fa-solid ${isFullscreen ? "fa-compress" : "fa-expand"}`} />
+                    </Button>
+                    <Button
+                        onClick={() => setZoomLevel(prev => clamp(prev + 0.1, 0.5, 3))}
+                        className="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors"
+                        style={{ backgroundColor: computedColor }}
+                    >
+                        <i className="fa-solid fa-eye" />
+                    </Button>
+                    <Button
+                        onClick={() => setZoomLevel(prev => clamp(prev - 0.1, 0.5, 3))}
+                        className="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors"
+                        style={{ backgroundColor: computedColor }}
+                    >
+                        <i className="fa-solid fa-eye-slash" />
+                    </Button>
+                </div>
+                <div className="flex gap-4">
+                    <Button
+                        onClick={() => setShowWinamp(prev => !prev)}
+                        className="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors"
+                        style={{ backgroundColor: showWinamp ? computedColor : "gray" }}
+                    >
+                        <i className="fa-solid fa-compact-disc" />
+                    </Button>
+                    <Button
+                        onClick={() => setMatrixEnabled(prev => !prev)}
+                        className="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors"
+                        style={{ backgroundColor: matrixEnabled ? computedColor : "gray" }}
+                    >
+                        <i className="fa-solid fa-globe" />
+                    </Button>
+                    <Button
+                        onClick={() => setAsciiEnabled(prev => !prev)}
+                        className="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors"
+                        style={{ backgroundColor: asciiEnabled ? computedColor : "gray" }}
+                    >
+                        <i className="fa-solid fa-theater-masks" />
+                    </Button>
+                </div>
+            </div>
+
+            <div className="flex flex-col gap-4">
+                <div className="flex gap-4 flex-wrap">
+                    <Button
+                        onClick={() => setShowGiphyKeyboard(prev => !prev)}
+                        className="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors"
+                        style={{ backgroundColor: showGiphyKeyboard ? computedColor : "gray" }}
+                    >
+                        <i className="fa-solid fa-images" />
+                    </Button>
+                    <Button
+                        onClick={() => setShowVirtualKeyboard(prev => !prev)}
+                        className="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors"
+                        style={{ backgroundColor: showVirtualKeyboard ? computedColor : "gray" }}
+                    >
+                        <i className="fa-solid fa-keyboard" />
+                    </Button>
+                    <Button
+                        onClick={() => setShowMediaPanel(prev => !prev)}
+                        className="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors"
+                        style={{ backgroundColor: showMediaPanel ? computedColor : "gray" }}
+                    >
+                        <i className="fa-solid fa-photo-film" />
+                    </Button>
+                    <Button
+                        onClick={() => setShowLayerPanel(prev => !prev)}
+                        className="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors"
+                        style={{ backgroundColor: showLayerPanel ? computedColor : "gray" }}
+                    >
+                        <i className="fa-solid fa-layer-group" />
+                    </Button>
+                </div>
+            </div>
+        </div>
+    ), [
+        isRecording, toggleRecording, useAsioProcessing, volume, eqFrequency, eqGain,
+        handleClearAllMedia, handleClear404Media, isFullscreen, handleToggleFullscreen,
+        zoomLevel, showWinamp, matrixEnabled, asciiEnabled, showGiphyKeyboard,
+        showVirtualKeyboard, showMediaPanel, showLayerPanel, computedColor
+    ]);
+
     useEffect(() => {
         const loadFFmpeg = async () => {
             const ffmpeg = new FFmpeg();
-            ffmpegRef.current = ffmpeg;
             await ffmpeg.load();
+            ffmpegRef.current = ffmpeg;
+            setIsFFmpegLoaded(true);
+            console.log("FFmpeg loaded successfully");
         };
         loadFFmpeg().catch((err) => console.error("Failed to load FFmpeg:", err));
     }, []);
@@ -176,7 +566,6 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
 
         if (savedMedia) {
             const parsedMedia: ExtendedMediaItem[] = JSON.parse(savedMedia);
-            // Synchronous fallback; async validation would require Promise.all
             setMediaList(parsedMedia.length > 0 ? parsedMedia : defaultMediaItems);
         } else {
             setMediaList(defaultMediaItems);
@@ -204,6 +593,18 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
             layer: showLayerPanel,
         }));
     }, [mediaList, keyMappings, showGiphyKeyboard, showVirtualKeyboard, showMediaPanel, showUnboundMediaList, showLayerPanel]);
+
+    useEffect(() => {
+        mediaList.forEach(item => {
+            fetch(item.src, { method: "HEAD" })
+                .then(response => {
+                    if (!response.ok) {
+                        setMedia404List(prev => [...new Set([...prev, item.src])]);
+                    }
+                })
+                .catch(() => setMedia404List(prev => [...new Set([...prev, item.src])]));
+        });
+    }, [mediaList]);
 
     useEffect(() => {
         const canvas = backgroundCanvasRef.current;
@@ -269,25 +670,79 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
     }, [isStarted]);
 
     useEffect(() => {
-        if (audioContext && analyser && audioRef.current) {
-            setAudioReady(true);
-            (window as any).sharedAudioElement = audioRef.current;
-            audioRef.current.loop = false;
-        }
-    }, [audioContext, analyser]);
+        let asioAudio: HTMLAudioElement | null = null;
 
-    useEffect(() => {
-        if (!isStarted || !webampReady || !audioReady || !analyser) return;
-        let rafId: number;
-        const updateAudioData = () => {
-            const data = new Uint8Array(analyser.frequencyBinCount);
-            analyser.getByteFrequencyData(data);
-            setAudioData(data);
-            rafId = requestAnimationFrame(updateAudioData);
+        if (!useAsioProcessing) {
+            if (processorRef.current) {
+                processorRef.current.dispose();
+                processorRef.current = null;
+            }
+            if (audioRef.current) {
+                audioRef.current.muted = false;
+                audioRef.current.volume = volume;
+            }
+            document.querySelectorAll("audio").forEach((el) => {
+                const mediaEl = el as HTMLMediaElement;
+                if (mediaEl !== audioRef.current) {
+                    mediaEl.muted = false;
+                }
+            });
+            setAudioReady(true);
+            return;
+        }
+
+        if (!processorRef.current) {
+            processorRef.current = new AsioAudioProcessor();
+        }
+
+        asioAudio = new Audio();
+        asioAudio.className = "hidden";
+        document.body.appendChild(asioAudio);
+
+        if (!processorRef.current.isMediaElementConnected(asioAudio)) {
+            processorRef.current.connectMediaElement(asioAudio);
+            asioAudio.muted = false;
+            processorRef.current.setVolume(volume);
+            if (audioRef.current && audioRef.current.src) {
+                asioAudio.src = audioRef.current.src;
+                if (isPlaying) asioAudio.play().catch((err) => console.error("ASIO play error:", err));
+            }
+        }
+
+        // Sync asioAudio with audioRef.current changes
+        const syncAudio = () => {
+            if (audioRef.current && asioAudio && audioRef.current.src !== asioAudio.src) {
+                asioAudio.src = audioRef.current.src;
+                if (isPlaying) asioAudio.play().catch((err) => console.error("ASIO sync play error:", err));
+            }
         };
-        rafId = requestAnimationFrame(updateAudioData);
-        return () => cancelAnimationFrame(rafId);
-    }, [isStarted, webampReady, audioReady, analyser]);
+        if (audioRef.current) {
+            audioRef.current.addEventListener("play", syncAudio);
+            audioRef.current.addEventListener("pause", () => asioAudio?.pause());
+            audioRef.current.addEventListener("ended", () => asioAudio?.pause());
+        }
+
+        // Don’t connect audioRef.current directly to avoid conflicts
+        // if (audioRef.current && !processorRef.current.isMediaElementConnected(audioRef.current) && audioRef.current !== webampAudioElement) {
+        //     processorRef.current.connectMediaElement(audioRef.current);
+        // }
+
+        return () => {
+            if (processorRef.current) {
+                processorRef.current.dispose();
+                processorRef.current = null;
+            }
+            if (audioRef.current) {
+                audioRef.current.muted = false;
+                audioRef.current.removeEventListener("play", syncAudio);
+                audioRef.current.removeEventListener("pause", () => asioAudio?.pause());
+                audioRef.current.removeEventListener("ended", () => asioAudio?.pause());
+            }
+            if (asioAudio && document.body.contains(asioAudio)) {
+                document.body.removeChild(asioAudio);
+            }
+        };
+    }, [useAsioProcessing, mediaList, volume, isPlaying, webampAudioElement]);
 
     useEffect(() => {
         let rafId: number;
@@ -307,7 +762,6 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
         return () => cancelAnimationFrame(rafId);
     }, []);
 
-    // Event handlers
     const handleBackgroundMediaDrop = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         const url = e.dataTransfer.getData("text/uri-list") || e.dataTransfer.getData("text");
@@ -361,27 +815,35 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
     ];
     const [currentTipIndex, setCurrentTipIndex] = useState(0);
 
-    const onSelectElement = useCallback((elem: SelectedElement) => {
+    const [lastInteractionWasDoubleClick, setLastInteractionWasDoubleClick] = useState(false);
+
+    const onSelectElement = useCallback((elem: SelectedElement, event?: React.MouseEvent) => {
         setSelectedElement(elem);
         setSelectedLayer(null);
+        if (event && event.detail === 2) {
+            setShowLayerPanel(false); // Close Layers & Effects
+            setShowPalette(true);
+            setLastInteractionWasDoubleClick(true);
+        } else {
+            setLastInteractionWasDoubleClick(false);
+        }
     }, []);
 
     const onSelectLayer = useCallback((layer: SelectedLayer) => {
         setSelectedLayer(layer);
         setSelectedElement(null);
+        setLastInteractionWasDoubleClick(false);
     }, []);
 
-    
     const togglePlayPause = useCallback(() => {
         setIsPlaying((prev) => {
             const newState = !prev;
             if (audioRef.current) {
                 audioRef.current.loop = false;
+                processorRef.current?.resume();
                 if (newState) {
                     audioRef.current.play().catch((err) => {
-                        if (err.name !== "AbortError") {
-                            console.error("Audio play error:", err);
-                        }
+                        if (err.name !== "AbortError") console.error("Audio play error:", err);
                     });
                 } else {
                     audioRef.current.pause();
@@ -402,6 +864,7 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
     const handleStart = useCallback(() => {
         setIsStarted(true);
         if (webampReady && audioRef.current && audioReady) {
+            processorRef.current?.resume();
             audioRef.current.play().catch((err) => {
                 if (err.name !== "AbortError") {
                     console.error("Audio play error:", err);
@@ -411,27 +874,10 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
         }
     }, [webampReady, audioReady]);
 
-    useEffect(() => {
-        const video = backgroundVideoRef.current;
-        if (!video) return;
-
-        video.loop = backgroundLoop;
-        video.autoplay = backgroundAutoplay;
-
-        if (isPlaying && backgroundAutoplay) {
-            video.play().catch((err) => {
-                if (err.name !== "AbortError") {
-                    console.error("Video play error:", err);
-                }
-            });
-        } else {
-            video.pause();
-        }
-    }, [isPlaying, backgroundMedia, backgroundLoop, backgroundAutoplay]);
-
     const handleWebampReady = useCallback(() => {
         setWebampReady(true);
     }, []);
+
     const handleGifSelect = useCallback(
         async (gifUrl: string) => {
             const scaleToCover = Math.max(workspaceDimensions.width / 256, workspaceDimensions.height / 256);
@@ -472,127 +918,88 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
         [setMediaList]
     );
 
-
-    const toggleRecording = async () => {
-        if (!isRecording) {
-            try {
-                const stream = await navigator.mediaDevices.getDisplayMedia({
-                    video: {
-                        cursor: "always",
-                        displaySurface: "monitor",
-                    },
-                    audio: {
-                        echoCancellation: true,
-                        noiseSuppression: true,
-                        sampleRate: 44100,
-                    },
-                });
-                console.log("Recording stream started in fullscreen:", isFullscreen);
-
-                const recorder = new MediaRecorder(stream, {
-                    mimeType: "video/webm;codecs=vp8,opus",
-                    videoBitsPerSecond: 2500000,
-                    audioBitsPerSecond: 128000,
-                });
-                setMediaRecorder(recorder);
-                recordedChunksRef.current = [];
-                setIsPreparingFile(false); // No prep during recording
-                setPrepStatus(null); // Reset status
-
-                recorder.ondataavailable = (e) => {
-                    if (e.data.size > 0) {
-                        recordedChunksRef.current.push(e.data);
-                        console.log("Chunk recorded, size:", e.data.size);
-                    }
-                };
-
-                recorder.onstop = async () => {
-                    console.log("Recorder stopped, preparing file...");
-                    setIsPreparingFile(true);
-                    setPrepStatus("preparing");
-
-                    const webmBlob = new Blob(recordedChunksRef.current, { type: "video/webm" });
-                    if (ffmpegRef.current && ffmpegRef.current.loaded) {
-                        try {
-                            const webmArrayBuffer = await webmBlob.arrayBuffer();
-                            await ffmpegRef.current.writeFile("input.webm", new Uint8Array(webmArrayBuffer));
-                            console.log("WebM written, converting...");
-
-                            await ffmpegRef.current.exec([
-                                "-i", "input.webm",
-                                "-c:v", "libx264",
-                                "-c:a", "aac",
-                                "-b:v", "2500k",
-                                "-b:a", "128k",
-                                "-preset", "fast",
-                                "output.mp4",
-                            ]);
-                            const mp4Data = (await ffmpegRef.current.readFile("output.mp4")) as Uint8Array;
-                            const mp4Blob = new Blob([mp4Data], { type: "video/mp4" });
-                            const url = URL.createObjectURL(mp4Blob);
-                            setPrepStatus("done"); // File ready
-                            const a = document.createElement("a");
-                            a.href = url;
-                            a.download = `recording-${Date.now()}.mp4`;
-                            a.click();
-                            URL.revokeObjectURL(url);
-                            await ffmpegRef.current.deleteFile("input.webm");
-                            await ffmpegRef.current.deleteFile("output.mp4");
-                            console.log("MP4 file downloaded successfully");
-                        } catch (err) {
-                            console.error("FFmpeg conversion fucked:", err);
-                            setPrepStatus("fucked"); // Only set when it actually fails
-                        }
-                    } else {
-                        // Fallback to WebM
-                        const url = URL.createObjectURL(webmBlob);
-                        setPrepStatus("done"); // Quick prep for fallback
-                        const a = document.createElement("a");
-                        a.href = url;
-                        a.download = `recording-${Date.now()}.webm`;
-                        a.click();
-                        URL.revokeObjectURL(url);
-                        console.log("WebM fallback downloaded");
-                    }
-                    stream.getTracks().forEach((track) => {
-                        track.stop();
-                        console.log("Stream track stopped:", track.kind);
-                    });
-                    setMediaRecorder(null);
-                    recordedChunksRef.current = [];
-                    setTimeout(() => {
-                        setIsPreparingFile(false);
-                        setPrepStatus(null);
-                    }, 2000); // Hide after 2 seconds if done or fucked
-                };
-
-                recorder.onerror = (e) => {
-                    console.error("MediaRecorder error:", e);
-                    setIsRecording(false);
-                    setIsPreparingFile(false);
-                    setPrepStatus(null);
-                };
-
-                recorder.start(500);
-                setIsRecording(true);
-                console.log("Recording started in fullscreen mode");
-            } catch (err) {
-                console.error("Error starting recording:", err);
-                setIsRecording(false);
-            }
-        } else if (mediaRecorder && mediaRecorder.state !== "inactive") {
-            mediaRecorder.stop();
-            setIsRecording(false);
-            console.log("Recording stopped manually");
-        }
-    };
-
-    // Bail out function
-    const handleBailOut = () => {
+    const handleBailOut = useCallback(() => {
         setIsPreparingFile(false);
         setPrepStatus(null);
-        console.log("Bailed out of file prep");
-    };
+    }, []);
+
+    const toggleStreaming = useCallback(async () => {
+        if (!isStreaming) {
+            if (!isFFmpegLoaded) {
+                console.error("FFmpeg is still loading. Please wait.");
+                return;
+            }
+
+            if (!streamServerUrl || !streamKey) {
+                console.error("RTMP Server URL and Stream Key are required.");
+                return;
+            }
+
+            console.log("Starting stream with settings:", {
+                streamBitrate,
+                streamResolution,
+                streamServerUrl,
+                streamKey,
+            });
+
+            try {
+                const [width, height] = streamResolution.split("x").map(Number);
+                const stream = await navigator.mediaDevices.getDisplayMedia({
+                    video: { width, height, displaySurface: "monitor" },
+                    audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 44100 },
+                });
+
+                if (!ffmpegRef.current) {
+                    console.error("FFmpeg unexpectedly null");
+                    stream.getTracks().forEach(track => track.stop());
+                    return;
+                }
+
+                const rtmpUrl = `${streamServerUrl}/${streamKey}`;
+                const mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: "video/webm;codecs=vp8,opus",
+                    videoBitsPerSecond: streamBitrate,
+                });
+
+                mediaRecorder.ondataavailable = async (e) => {
+                    if (e.data.size > 0 && ffmpegRef.current) {
+                        const buffer = await e.data.arrayBuffer();
+                        await ffmpegRef.current.writeFile("input.webm", new Uint8Array(buffer));
+                        await ffmpegRef.current.exec([
+                            "-i", "input.webm",
+                            "-c:v", "libx264",
+                            "-c:a", "aac",
+                            "-b:v", `${streamBitrate / 1000}k`,
+                            "-f", "flv",
+                            rtmpUrl,
+                        ]);
+                        console.log("Stream chunk sent to RTMP:", rtmpUrl);
+                    } else if (!ffmpegRef.current) {
+                        console.error("FFmpeg is null during streaming");
+                    }
+                };
+
+                mediaRecorder.onstop = () => {
+                    stream.getTracks().forEach(track => track.stop());
+                    setMediaRecorder(null);
+                };
+
+                mediaRecorder.start(1000);
+                setMediaRecorder(mediaRecorder);
+                setIsStreaming(true);
+            } catch (err: any) {
+                if (err.name === "NotAllowedError") {
+                    console.error("Permission denied to capture screen/audio. Please allow access and try again.");
+                } else {
+                    console.error("Error starting RTMP streaming:", err);
+                }
+                setIsStreaming(false);
+            }
+        } else if (mediaRecorder) {
+            mediaRecorder.stop();
+            setIsStreaming(false);
+        }
+    }, [isStreaming, mediaRecorder, streamBitrate, streamResolution, streamServerUrl, streamKey, isFFmpegLoaded]);
 
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent) => {
@@ -614,7 +1021,7 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
                 case "pagedown": setZoomLevel(p => clamp(p - 0.1, 0.5, 3)); break;
                 default:
                     const mapping = keyMappings.find(m => m.key.toUpperCase() === e.key.toUpperCase());
-                    if (mapping && mapping.assignedIndex !== null) { // Fixed undefined check
+                    if (mapping && mapping.assignedIndex !== null) {
                         const mediaIndex = mapping.assignedIndex;
                         setMediaList(prev =>
                             prev.map((item, i) => {
@@ -635,137 +1042,280 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
         return () => window.removeEventListener("keydown", onKeyDown);
     }, [keyMappings, mediaList, setMediaList, handleToggleFullscreen, togglePlayPause, handleStop, activeMediaIndex]);
 
+
     const { computedColor: effectsColor } = useEffects({
         matrixEnabled,
-        visualizerEnabled,
+        visualizerEnabled: visualizerEnabled && !showWinamp,
         matrixCanvasRef,
         visualizerCanvasRef,
         barCanvasRef,
-        audioContext,
+        audioContext: processorRef.current ? processorRef.current.getAudioContext() : null,
         audioData,
         isFullscreen,
         isPlaying,
         computedColor,
     });
 
+    // Adjust mediaListForComponents to match VirtualKeyboard's MediaItem (with opacity)
+    const mediaListForComponents: VirtualKeyboardMediaItem[] = mediaList
+        .filter((item) => ["audio", "video", "image"].includes(item.type))
+        .map((item) => ({
+            type: item.type as "audio" | "video" | "image",
+            src: item.src,
+            x: item.x,
+            y: item.y,
+            scale: item.scale,
+            rotation: item.rotation,
+            visible: item.visible,
+            interruptOnPlay: item.interruptOnPlay,
+            isManuallyControlled: item.isManuallyControlled,
+            showAt: item.showAt,
+            hideAt: item.hideAt,
+            opacity: item.opacity, // Include required opacity
+        }));
+
     const renderVirtualKeyboardPanel = useCallback(
         () => (
             <VirtualKeyboard
                 keyMappings={keyMappings}
-                mediaList={mediaList}
+                mediaList={mediaListForComponents}
                 setKeyMappings={setKeyMappings}
-                setMediaList={setMediaList}
+                setMediaList={(list: VirtualKeyboardMediaItem[]) => setMediaList(list as ExtendedMediaItem[])} // Adjust type
                 computedColor={computedColor}
                 onSelectElement={onSelectElement}
             />
         ),
-        [keyMappings, mediaList, setKeyMappings, setMediaList, computedColor, onSelectElement]
+        [keyMappings, mediaListForComponents, setKeyMappings, setMediaList, computedColor, onSelectElement]
     );
 
+    // In SkryrPage.tsx
     const renderOptionsContent = useCallback(() => {
-        if (!selectedElement && !selectedLayer) return <div className="text-xs">Double-click an element or select a layer for options</div>;
+        if (!selectedElement || selectedElement.index >= mediaList.length) return null;
+        const media = mediaList[selectedElement.index];
 
-        if (selectedElement?.type === "media") {
-            const media = mediaList[selectedElement.index] as ExtendedMediaItem;
-            return (
-                <div className="flex flex-col gap-2 text-black">
-                    <div className="grid grid-cols-3 gap-1">
-                        <Button onClick={() => setMediaList(prev => prev.map((item, i) => i === selectedElement.index ? { ...item, scale: workspaceDimensions.width / 256 } : item))} className="w-full h-10 text-2xl border-2 border-current text-gray-500" title="Fit Fullscreen"><i className="fa-solid fa-expand" /></Button>
-                        <Button onClick={() => setMediaList(prev => prev.map((item, i) => i === selectedElement.index ? { ...item, x: 50, y: 50 } : item))} className="w-full h-10 text-2xl border-2 border-current text-gray-500" title="Center Workspace"><i className="fa-solid fa-crosshairs" /></Button>
-                        <Button onClick={() => setMediaList(prev => prev.map((item, i) => i === selectedElement.index ? { ...item, interruptOnPlay: !item.interruptOnPlay } : item))} className={`w-full h-10 text-2xl border-2 ${media.interruptOnPlay ? "border-green-500 text-green-500" : "border-red-500 text-red-500"}`} title="Toggle Interrupt Others"><i className={`fa-solid ${media.interruptOnPlay ? "fa-toggle-on" : "fa-toggle-off"}`} /></Button>
-                        <Button onClick={() => { if (selectedElement.index < mediaList.length - 1) { const newList = [...mediaList];[newList[selectedElement.index], newList[selectedElement.index + 1]] = [newList[selectedElement.index + 1], newList[selectedElement.index]]; setMediaList(newList); } }} className="w-full h-10 text-2xl border-2 border-current text-gray-500" title="Move Forward"><i className="fa-solid fa-arrow-up" /></Button>
-                        <Button onClick={() => { if (selectedElement.index > 0) { const newList = [...mediaList];[newList[selectedElement.index], newList[selectedElement.index - 1]] = [newList[selectedElement.index - 1], newList[selectedElement.index]]; setMediaList(newList); } }} className="w-full h-10 text-2xl border-2 border-current text-gray-500" title="Move Backward"><i className="fa-solid fa-arrow-down" /></Button>
-                        <Button onClick={() => { setMediaList(prev => prev.filter((_, i) => i !== selectedElement.index)); setSelectedElement(null); }} className="w-full h-10 text-2xl border-2 border-red-500 text-red-500" title="Remove Media"><i className="fa-solid fa-trash" /></Button>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                        {media.type === "video" && (
-                            <Button onClick={() => setMediaList(prev => prev.map((item, i) => i === selectedElement.index ? { ...item, showControls: !item.showControls } : item))} className={`w-full h-10 text-2xl border-2 ${media.showControls ? "border-green-500 text-green-500" : "border-red-500 text-red-500"}`} title="Toggle Video Controls"><i className={`fa-solid ${media.showControls ? "fa-eye" : "fa-eye-slash"}`} /></Button>
-                        )}
-                        <select value={media.mixBlendMode || "normal"} onChange={(e) => setMediaList(prev => { const newList = [...prev]; newList[selectedElement.index] = { ...newList[selectedElement.index], mixBlendMode: e.target.value as MixBlendMode }; return newList; })} className="w-full p-2 border">
-                            <option value="normal">Normal</option>
-                            <option value="multiply">Multiply</option>
-                            <option value="screen">Screen</option>
-                            <option value="overlay">Overlay</option>
-                            <option value="darken">Darken</option>
-                            <option value="lighten">Lighten</option>
-                            <option value="color-dodge">Color Dodge</option>
-                            <option value="color-burn">Color Burn</option>
-                            <option value="hard-light">Hard Light</option>
-                            <option value="soft-light">Soft Light</option>
-                            <option value="difference">Difference</option>
-                            <option value="exclusion">Exclusion</option>
-                            <option value="hue">Hue</option>
-                            <option value="saturation">Saturation</option>
-                            <option value="color">Color</option>
-                            <option value="luminosity">Luminosity</option>
-                        </select>
-                        <div className="flex items-center gap-2"><i className="fa-solid fa-arrows-left-right" /><Slider min={0} max={100} step={1} value={[media.x]} onValueChange={(value) => setMediaList(prev => prev.map((item, i) => i === selectedElement.index ? { ...item, x: value[0] } : item))} className="flex-1" /><span className="text-sm w-12 text-right">{media.x.toFixed(0)}</span></div>
-                        <div className="flex items-center gap-2"><i className="fa-solid fa-arrows-up-down" /><Slider min={0} max={100} step={1} value={[media.y]} onValueChange={(value) => setMediaList(prev => prev.map((item, i) => i === selectedElement.index ? { ...item, y: value[0] } : item))} className="flex-1" /><span className="text-sm w-12 text-right">{media.y.toFixed(0)}</span></div>
-                        <div className="flex items-center gap-2"><i className="fa-solid fa-expand" /><Slider min={0.1} max={10} step={0.1} value={[media.scale]} onValueChange={(value) => setMediaList(prev => prev.map((item, i) => i === selectedElement.index ? { ...item, scale: value[0] } : item))} className="flex-1" /><span className="text-sm w-12 text-right">{media.scale.toFixed(1)}</span></div>
-                        <div className="flex items-center gap-2"><i className="fa-solid fa-rotate" /><Slider min={0} max={360} step={1} value={[media.rotation]} onValueChange={(value) => setMediaList(prev => prev.map((item, i) => i === selectedElement.index ? { ...item, rotation: value[0] } : item))} className="flex-1" /><span className="text-sm w-12 text-right">{media.rotation.toFixed(0)}</span></div>
-                        <div className="flex items-center gap-2"><i className="fa-solid fa-eye" /><Slider min={0} max={1} step={0.01} value={[media.opacity]} onValueChange={(value) => setMediaList(prev => prev.map((item, i) => i === selectedElement.index ? { ...item, opacity: value[0] } : item))} className="flex-1" /><span className="text-sm w-12 text-right">{media.opacity.toFixed(2)}</span></div>
-                    </div>
-                </div>
-            );
-        } else if (selectedElement?.type === "customText") {
-            const ct = customTexts[selectedElement.index];
-            return (
-                <div className="flex flex-col gap-1 max-h-screen overflow-auto text-black">
-                    <div className="text-lg font-bold mb-2">ASCII/Text Options</div>
-                    {ct.isAscii ? (
-                        <textarea value={ct.text || ""} onChange={(e) => setCustomTexts(prev => prev.map((item, i) => i === selectedElement.index ? { ...item, text: e.target.value } : item))} className="w-full h-48 bg-transparent p-2 whitespace-pre-wrap border" style={{ borderColor: computedColor }} />
-                    ) : (
-                        <input type="text" placeholder="Edit Text" value={ct.text || ""} onChange={(e) => setCustomTexts(prev => prev.map((item, i) => i === selectedElement.index ? { ...item, text: e.target.value } : item))} className="w-full p-2 border" style={{ borderColor: computedColor }} />
-                    )}
-                    <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-2"><i className="fa-solid fa-arrows-left-right" /><Slider min={0} max={100} step={1} value={[ct.x]} onValueChange={(value) => setCustomTexts(prev => prev.map((item, i) => i === selectedElement.index ? { ...item, x: value[0] } : item))} className="flex-1" /><span className="text-sm w-12 text-right">{ct.x.toFixed(0)}</span></div>
-                        <div className="flex items-center gap-2"><i className="fa-solid fa-arrows-up-down" /><Slider min={0} max={100} step={1} value={[ct.y]} onValueChange={(value) => setCustomTexts(prev => prev.map((item, i) => i === selectedElement.index ? { ...item, y: value[0] } : item))} className="flex-1" /><span className="text-sm w-12 text-right">{ct.y.toFixed(0)}</span></div>
-                        <div className="flex items-center gap-2"><i className="fa-solid fa-expand" /><Slider min={0.1} max={10} step={0.1} value={[ct.scale]} onValueChange={(value) => setCustomTexts(prev => prev.map((item, i) => i === selectedElement.index ? { ...item, scale: value[0] } : item))} className="flex-1" /><span className="text-sm w-12 text-right">{ct.scale.toFixed(1)}</span></div>
-                        <div className="flex flex-row gap-1">
-                            <input type="color" value={ct.color} onChange={(e) => setCustomTexts(prev => prev.map((item, i) => i === selectedElement.index ? { ...item, color: e.target.value } : item))} className="w-2/3" />
-                            <Button onClick={() => { setCustomTexts(prev => prev.filter((_, i) => i !== selectedElement.index)); setSelectedElement(null); }} className="w-full h-10 text-2xl bg-red-500 hover:bg-red-600" title="Remove Text"><i className="fa-solid fa-trash" /></Button>
-                        </div>
-                    </div>
-                </div>
-            );
-        } else if (selectedLayer === "background") { // Now valid due to updated SelectedLayer type
-            return (
-                <div className="flex flex-col gap-2 text-black">
-                    <div className="text-lg font-bold mb-2">Background Layer Options</div>
-                    <div
-                        className="w-full h-32 border-2 border-dashed border-gray-400 flex items-center justify-center"
-                        onDrop={(e) => handleBackgroundMediaDrop(e)}
-                        onDragOver={(e) => e.preventDefault()}
+        const updateMediaProperty = (property: keyof ExtendedMediaItem, value: any) => {
+            setMediaList(prev => {
+                const newList = [...prev];
+                newList[selectedElement.index] = { ...newList[selectedElement.index], [property]: value };
+                return newList;
+            });
+        };
+
+        const scaleToCover = () => {
+            const workspaceWidth = workspaceDimensions.width;
+            const workspaceHeight = workspaceDimensions.height;
+            const scaleFactor = Math.min(workspaceWidth, workspaceHeight) / 200; // Adjusted for tighter fit
+            updateMediaProperty("scale", scaleFactor);
+        };
+
+        const centerMedia = () => {
+            updateMediaProperty("x", 50);
+            updateMediaProperty("y", 50);
+        };
+
+        const isMediaType = ["image", "gif", "video"].includes(media.type);
+
+        return (
+            <div
+                className="flex flex-col gap-1 p-2 text-white"
+                style={{ backgroundColor: "rgba(0, 0, 0, 0.8)", color: computedColor, minWidth: "220px" }}
+            >
+                <div className="flex items-center justify-between w-full">
+                    <span className="text-sm font-bold truncate" title={media.src || "Text"}>
+                        {media.src ? media.src.split("/").pop()?.substring(0, 10) : "Text"}
+                    </span>
+                    <Button
+                        onClick={() => {
+                            setSelectedElement(null);
+                            setLastInteractionWasDoubleClick(false);
+                        }}
+                        className="p-1 bg-transparent hover:bg-gray-600 transition-colors"
                     >
-                        <span>Drop media here to set as background</span>
-                    </div>
-                    <Button onClick={() => setBackgroundMedia(null)} className="w-full h-10 bg-red-500 hover:bg-red-600" title="Clear Background"><i className="fa-solid fa-trash" /> Clear</Button>
-                    <div className="flex items-center gap-2"><i className="fa-solid fa-arrows-left-right" /><Slider min={-100} max={100} step={1} value={[backgroundX]} onValueChange={(value) => setBackgroundX(value[0])} className="flex-1" /><span className="text-sm w-12 text-right">{backgroundX.toFixed(0)}</span></div>
-                    <div className="flex items-center gap-2"><i className="fa-solid fa-arrows-up-down" /><Slider min={-100} max={100} step={1} value={[backgroundY]} onValueChange={(value) => setBackgroundY(value[0])} className="flex-1" /><span className="text-sm w-12 text-right">{backgroundY.toFixed(0)}</span></div>
-                    <div className="flex items-center gap-2"><i className="fa-solid fa-expand" /><Slider min={0.1} max={10} step={0.1} value={[backgroundScale]} onValueChange={(value) => setBackgroundScale(value[0])} className="flex-1" /><span className="text-sm w-12 text-right">{backgroundScale.toFixed(1)}</span></div>
-                    <div className="flex items-center gap-2"><i className="fa-solid fa-rotate" /><Slider min={0} max={360} step={1} value={[backgroundRotation]} onValueChange={(value) => setBackgroundRotation(value[0])} className="flex-1" /><span className="text-sm w-12 text-right">{backgroundRotation.toFixed(0)}</span></div>
-                    <div className="flex items-center gap-2"><i className="fa-solid fa-eye" /><Slider min={0} max={1} step={0.01} value={[backgroundOpacity]} onValueChange={(value) => setBackgroundOpacity(value[0])} className="flex-1" /><span className="text-sm w-12 text-right">{backgroundOpacity.toFixed(2)}</span></div>
+                        <i className="fa-solid fa-times" />
+                    </Button>
                 </div>
-            );
-        }
-        return null;
-    }, [selectedElement, selectedLayer, mediaList, customTexts, setMediaList, setCustomTexts, workspaceDimensions, computedColor, backgroundX, backgroundY, backgroundScale, backgroundRotation, backgroundOpacity]);
 
-    // Webamp props
+                {isMediaType && (
+                    <>
+                        <div className="flex items-center gap-1">
+                            <i className="fa-solid fa-eye-slash text-xs" />
+                            <Slider
+                                min={0}
+                                max={1}
+                                step={0.01}
+                                value={[media.opacity]}
+                                onValueChange={(value) => updateMediaProperty("opacity", value[0])}
+                                className="w-full h-2"
+                                style={{ accentColor: computedColor }}
+                            />
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <i className="fa-solid fa-rotate text-xs" />
+                            <Slider
+                                min={0}
+                                max={360}
+                                step={1}
+                                value={[media.rotation]}
+                                onValueChange={(value) => updateMediaProperty("rotation", value[0])}
+                                className="w-full h-2"
+                                style={{ accentColor: computedColor }}
+                            />
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <i className="fa-solid fa-arrows-left-right text-xs" />
+                            <Slider
+                                min={0}
+                                max={100}
+                                step={1}
+                                value={[media.x]}
+                                onValueChange={(value) => updateMediaProperty("x", value[0])}
+                                className="w-full h-2"
+                                style={{ accentColor: computedColor }}
+                            />
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <i className="fa-solid fa-arrows-up-down text-xs" />
+                            <Slider
+                                min={0}
+                                max={100}
+                                step={1}
+                                value={[media.y]}
+                                onValueChange={(value) => updateMediaProperty("y", value[0])}
+                                className="w-full h-2"
+                                style={{ accentColor: computedColor }}
+                            />
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <i className="fa-solid fa-expand text-xs" />
+                            <Slider
+                                min={0.1}
+                                max={10}
+                                step={0.1}
+                                value={[media.scale]}
+                                onValueChange={(value) => updateMediaProperty("scale", value[0])}
+                                className="w-full h-2"
+                                style={{ accentColor: computedColor }}
+                            />
+                        </div>
+                        <div className="flex gap-1">
+                            <Button
+                                onClick={scaleToCover}
+                                className="p-1 bg-transparent hover:bg-gray-600 transition-colors flex-1"
+                            >
+                                <i className="fa-solid fa-arrows-alt text-xs" /> Cover
+                            </Button>
+                            <Button
+                                onClick={centerMedia}
+                                className="p-1 bg-transparent hover:bg-gray-600 transition-colors flex-1"
+                            >
+                                <i className="fa-solid fa-align-center text-xs" /> Center
+                            </Button>
+                        </div>
+                    </>
+                )}
+
+                {media.type === "text" && (
+                    <div className="flex flex-col gap-1">
+                        <span className="text-xs">Text</span>
+                        <textarea
+                            value={media.textContent || ""}
+                            onChange={(e) => updateMediaProperty("textContent", e.target.value)}
+                            className="bg-gray-800 text-white p-1 rounded h-16 resize-y text-xs"
+                            placeholder="ASCII/text"
+                            style={{ borderColor: computedColor }}
+                        />
+                    </div>
+                )}
+
+                <Button
+                    onClick={() => {
+                        setMediaList((prev) => prev.filter((_, i) => i !== selectedElement.index));
+                        setSelectedElement(null);
+                        setLastInteractionWasDoubleClick(false);
+                    }}
+                    className="p-1 bg-red-600 hover:bg-red-700 transition-colors mt-1"
+                >
+                    <i className="fa-solid fa-trash text-xs" />
+                </Button>
+            </div>
+        );
+    }, [selectedElement, mediaList, setMediaList, workspaceDimensions, computedColor]);
+
     const webampProps: WebampMilkdropProps = {
-        onTrackDrop: () => { },
+        onTrackDrop: (url: string) => {
+            setPrimaryAudioSrc(url);
+            if (audioRef.current) {
+                audioRef.current.src = url;
+                audioRef.current.load();
+                if (isPlaying) audioRef.current.play().catch(console.error);
+            }
+            document.querySelectorAll("#webamp-container audio").forEach((el) => {
+                const mediaEl = el as HTMLMediaElement;
+                if (mediaEl !== audioRef.current) {
+                    mediaEl.muted = true;
+                    mediaEl.pause();
+                }
+            });
+        },
         isPlaying,
         onPlayPause: togglePlayPause,
         onStop: handleStop,
         onReady: handleWebampReady,
         visualizerCanvasRef,
+        getAudioElement: (element: HTMLAudioElement) => {
+            setWebampAudioElement(element);
+            element.muted = false; // Webamp manages its own audio
+        },
     };
 
+    
     return (
         <div id="fullscreenContainer" className="w-screen h-screen relative">
+            <style jsx global>{`
+                @keyframes panel-rollout {
+                    from {
+                        max-height: 0;
+                        opacity: 0;
+                        transform: translateY(20px);
+                    }
+                    to {
+                        max-height: 1000px;
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+                @keyframes panel-retract {
+                    from {
+                        max-height: 1000px;
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                    to {
+                        max-height: 0;
+                        opacity: 0;
+                        transform: translateY(20px);
+                    }
+                }
+                .animate-panel {
+                    animation: panel-rollout 0.3s ease-out forwards;
+                }
+                .animate-panel.hidden {
+                    animation: panel-retract 0.3s ease-out forwards;
+                }
+                @keyframes pulseGlow {
+                    0% { box-shadow: 0 0 20px ${countdown > 0 ? "#666" : "#ff0000"}, inset 0 0 15px ${countdown > 0 ? "#222" : "#800000"}; transform: scale(1); }
+                    50% { box-shadow: 0 0 40px ${countdown > 0 ? "#999" : "#ff5555"}, inset 0 0 25px ${countdown > 0 ? "#444" : "#a00000"}; transform: scale(1.05); }
+                    100% { box-shadow: 0 0 20px ${countdown > 0 ? "#666" : "#ff0000"}, inset 0 0 15px ${countdown > 0 ? "#222" : "#800000"}; transform: scale(1); }
+                }
+                @keyframes spinGlow {
+                    0% { transform: rotate(0deg) scale(1.1); border-color: rgba(255, 255, 255, 0.5); }
+                    50% { transform: rotate(180deg) scale(1.15); border-color: rgba(255, 255, 255, 0.8); }
+                    100% { transform: rotate(360deg) scale(1.1); border-color: rgba(255, 255, 255, 0.5); }
+                }
+            `}</style>
             <audio ref={audioRef} className="hidden" />
+            <audio ref={asioAudioRef} className="hidden" />
             <div className="relative text-white overflow-hidden w-full h-full">
-                {/* Background Layer */}
                 <div className="absolute inset-0 z-0"
                     style={{
                         mixBlendMode: backgroundMixBlendMode,
@@ -780,22 +1330,24 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
                             style={{
                                 transform: `translate(${backgroundX}px, ${backgroundY}px) scale(${backgroundScale}) rotate(${backgroundRotation}deg)`,
                             }}
-                            muted
+                            muted={false}
                         />
                     ) : (
                         <canvas ref={backgroundCanvasRef} className="w-full h-full" />
                     )}
                 </div>
 
-                {/* Workspace */}
                 <Workspace
-                    mediaList={mediaList}
+                    mediaList={mediaListForComponents.map((item, index) => ({
+                        ...item,
+                        id: `media-${item.type}-${index}`,
+                    }))}
                     customTexts={customTexts}
                     isFullscreen={isFullscreen}
                     workspaceDimensions={workspaceDimensions}
                     zoomLevel={zoomLevel}
                     asciiEnabled={asciiEnabled}
-                    onMediaListUpdate={setMediaList}
+                    onMediaListUpdate={(list: MediaItem[]) => setMediaList(list as ExtendedMediaItem[])} // Adjust type
                     onCustomTextsUpdate={setCustomTexts}
                     onSelectElement={onSelectElement}
                     matrixCanvasRef={matrixCanvasRef}
@@ -819,24 +1371,22 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
                     asciiSaturation={asciiSaturation}
                     allMediaSaturation={allMediaSaturation}
                     layerOrder={layerOrder}
-                    milkdropMixBlendMode="color"
-                />
+                    milkdropMixBlendMode="color" setCustomTexts={function (value: React.SetStateAction<CustomTextItem[]>): void {
+                        throw new Error("Function not implemented.");
+                    } }                />
 
-                {/* Webamp/Milkdrop Layer */}
-                {audioReady && showWinamp && audioRef.current && (
-                    <div className="absolute inset-0 z-1 pointer-events-auto"
-                        style={{
-                            mixBlendMode: "normal",
-                            opacity: milkdropOpacity,
-                            filter: `gamma(${milkdropGamma}) saturate(${milkdropSaturation})`,
-                        }}>
+                {audioReady && showWinamp && (
+                    <div
+                        className="absolute inset-0 z-1 pointer-events-auto"
+
+                    >
                         <WebampMilkdrop {...webampProps} />
                     </div>
                 )}
-                {/* File Preparation Indicator */}
+
                 {isPreparingFile && (
-                    <div className="fixed bottom-10 left-1/2 transform -translate-x-1/2 z-[10003] w-1/2 bg-gray-800 p-2 rounded shadow-lg">
-                        <div className="text-center text-sm mb-1">
+                    <div className="fixed bottom-10 left-1/2 transform -translate-x-1/2 z-[10003] w-1/2 bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700 animate-panel">
+                        <div className="text-center text-sm text-gray-300 mb-2">
                             {prepStatus === "preparing" && "Preparing File..."}
                             {prepStatus === "done" && "File Ready, Bro!"}
                             {prepStatus === "fucked" && "Shit’s Fucked"}
@@ -846,24 +1396,27 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
                                 <div className="bg-blue-500 h-2.5 rounded-full animate-indeterminate" />
                             )}
                             {prepStatus === "done" && (
-                                <div className="bg-green-500 h-2.5 rounded-full" style={{ width: "100%" }} />
+                                <div className="bg-green-600 h-2.5 rounded-full" style={{ width: "100%" }} />
                             )}
                             {prepStatus === "fucked" && (
-                                <div className="bg-red-500 h-2.5 rounded-full" style={{ width: "100%" }} />
+                                <div className="bg-red-600 h-2.5 rounded-full" style={{ width: "100%" }} />
                             )}
                         </div>
                         {(prepStatus === "preparing" || prepStatus === "fucked") && (
                             <Button
-                                className="mt-2 w-full bg-red-600 hover:bg-red-700"
+                                className="mt-4 w-full p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors"
+                                style={{ backgroundColor: computedColor }}
                                 onClick={handleBailOut}
                             >
-                                Bail Out
+                                <i className="fa-solid fa-trash" />
                             </Button>
                         )}
                     </div>
                 )}
-                <Suspense fallback={<div>Loading...</div>}>
+
+                <Suspense fallback={<div className="text-gray-300">Loading...</div>}>
                     <SkryrPalette
+                        lastInteractionWasDoubleClick={lastInteractionWasDoubleClick}
                         isFullscreen={isFullscreen}
                         handleToggleFullscreen={handleToggleFullscreen}
                         showPalette={showPalette}
@@ -945,7 +1498,6 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
                             isPlaying={isPlaying}
                             handlePlayPause={togglePlayPause}
                             handleStop={handleStop}
-                            handleZoomChange={(delta: number) => setZoomLevel(prev => clamp(prev + delta, 0.5, 3))}
                             handleToggleFullscreen={handleToggleFullscreen}
                             isFullscreen={isFullscreen}
                             showToolsInFullscreen={true}
@@ -958,54 +1510,78 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
                             setEmbeddedMode={setMatrixEnabled}
                             primaryAudioSrc={primaryAudioSrc}
                             primaryAudioRef={audioRef}
-                            onPrimaryAudioDrop={(e: React.DragEvent<HTMLDivElement>) => {
-                                e.preventDefault();
-                                const url = e.dataTransfer.getData("text/uri-list") || e.dataTransfer.getData("text");
-                                if (url && audioRef.current) {
-                                    setPrimaryAudioSrc(url);
-                                    audioRef.current.src = url;
-                                    audioRef.current.loop = false;
-                                    audioRef.current.play().catch(console.error);
-                                    setIsPlaying(true);
-                                }
+                            audioProgress={audioRef.current ? audioRef.current.currentTime / (audioRef.current.duration || 1) : 0}
+                            setAudioProgress={(progress: number) => {
+                                if (audioRef.current) audioRef.current.currentTime = progress * (audioRef.current.duration || 1);
                             }}
                             selectedElement={selectedElement}
-                            renderOptionsContent={renderOptionsContent}
+                            renderOptionsContent={renderOptionsContent} // Added
                             mediaList={mediaList}
                             keyMappings={keyMappings}
                             setKeyMappings={setKeyMappings}
                             setMediaList={setMediaList}
+                            showGiphyKeyboard={showGiphyKeyboard}
+                            setShowGiphyKeyboard={setShowGiphyKeyboard}
+                            handleGifSelect={handleGifSelect}
                             renderVirtualKeyboardPanel={renderVirtualKeyboardPanel}
                             toggleMatrixMode={() => setMatrixEnabled(prev => !prev)}
                             toggleAsciiMode={() => setAsciiEnabled(prev => !prev)}
                             isMatrixModeActive={matrixEnabled}
                             isAsciiModeActive={asciiEnabled}
                             onDeselectElement={() => { setSelectedElement(null); setSelectedLayer(null); }}
-                            onToggleMedia={onToggleMedia}
-                            showGiphyKeyboard={showGiphyKeyboard}
-                            setShowGiphyKeyboard={setShowGiphyKeyboard}
-                            handleGifSelect={handleGifSelect}
                             showVirtualKeyboard={showVirtualKeyboard}
                             setShowVirtualKeyboard={setShowVirtualKeyboard}
                             showMediaPanel={showMediaPanel}
                             setShowMediaPanel={setShowMediaPanel}
                             showUnboundMediaList={showUnboundMediaList}
                             setShowUnboundMediaList={setShowUnboundMediaList}
-                            audioProgress={audioRef.current ? audioRef.current.currentTime / audioRef.current.duration : 0}
-                            setAudioProgress={(progress: number) => {
-                                if (audioRef.current) audioRef.current.currentTime = progress * audioRef.current.duration;
-                            }}
                             toggleWinamp={() => setShowWinamp(prev => !prev)}
+                            showWinamp={showWinamp}
                             swapLayerOrder={() => setShowLayerPanel(true)}
                             onSelectLayer={onSelectLayer}
                             toggleLayerPanel={() => setShowLayerPanel(prev => !prev)}
                             showLayerPanel={showLayerPanel}
+                            onToggleMedia={onToggleMedia}
                             fps={fps}
                             isRecording={isRecording}
                             toggleRecording={toggleRecording}
-                            audioData={audioData}
-                        />
+                            audioData={new Uint8Array()}
+                            renderAudioControls={renderAudioControls}
+                            toggleAudioPanel={() => setShowAudioPanel(prev => !prev)}
+                            isFFmpegLoaded={isFFmpegLoaded}
+                            isStreaming={isStreaming}
+                            toggleStreaming={toggleStreaming}
+                            streamBitrate={streamBitrate}
+                            setStreamBitrate={setStreamBitrate}
+                            streamResolution={streamResolution}
+                            setStreamResolution={setStreamResolution}
+                            streamServerUrl={streamServerUrl}
+                            setStreamServerUrl={setStreamServerUrl}
+                            streamKey={streamKey}
+                            setStreamKey={setStreamKey}
+                            handleClearAllMedia={handleClearAllMedia}
+                            handleClear404Media={handleClear404Media}
+                            toggleAudioIntegration={() => setUseAsioProcessing(prev => !prev)}
+                            isAudioIntegrationActive={useAsioProcessing} setSelectedElement={function (value: React.SetStateAction<{ type: "media" | "customText"; index: number; } | null>): void {
+                                throw new Error("Function not implemented.");
+                            } }                        />
                     </SkryrPalette>
+                    <div className="flex flex-row gap-4">
+                        <div className="flex gap-2">
+                            <Button
+                                onClick={handleClearAllMedia}
+                                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+                            >
+                                Clear All Media
+                            </Button>
+                            <Button
+                                onClick={handleClear404Media}
+                                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+                            >
+                                Clear 404 Media
+                            </Button>
+                        </div>
+                    </div>
                 </Suspense>
 
                 {audioRef.current && (
@@ -1037,22 +1613,9 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
                         <div className="mt-5 text-center max-w-[600px] text-sm p-2 bg-black/70 rounded" style={{ color: computedColor }}>
                             {helpTips[currentTipIndex]}
                         </div>
-                        <style jsx>{`
-                            @keyframes pulseGlow {
-                                0% { box-shadow: 0 0 20px ${countdown > 0 ? "#666" : "#ff0000"}, inset 0 0 15px ${countdown > 0 ? "#222" : "#800000"}; transform: scale(1); }
-                                50% { box-shadow: 0 0 40px ${countdown > 0 ? "#999" : "#ff5555"}, inset 0 0 25px ${countdown > 0 ? "#444" : "#a00000"}; transform: scale(1.05); }
-                                100% { box-shadow: 0 0 20px ${countdown > 0 ? "#666" : "#ff0000"}, inset 0 0 15px ${countdown > 0 ? "#222" : "#800000"}; transform: scale(1); }
-                            }
-                            @keyframes spinGlow {
-                                0% { transform: rotate(0deg) scale(1.1); border-color: rgba(255, 255, 255, 0.5); }
-                                50% { transform: rotate(180deg) scale(1.15); border-color: rgba(255, 255, 255, 0.8); }
-                                100% { transform: rotate(360deg) scale(1.1); border-color: rgba(255, 255, 255, 0.5); }
-                            }
-                        `}</style>
                     </div>
                 )}
             </div>
-
         </div>
     );
 };

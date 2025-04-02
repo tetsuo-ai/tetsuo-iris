@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertErrorMessage } from "@/components/shared/AlertErrorMessage";
-import type { MediaItem } from "@/components/ui/UnboundMediaList";
+import type { MediaItem } from "@/components/pages/MediaPage/SkryrPage/ui/skryr-unbound-media";
 
 export interface AnimationPageProps {
     onMediaSelect: (media: MediaItem) => void;

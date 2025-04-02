@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertErrorMessage } from "@/components/shared/AlertErrorMessage";
-import type { MediaItem } from "@/components/ui/UnboundMediaList";
+import type { MediaItem } from "@/components/pages/MediaPage/SkryrPage/ui/skryr-unbound-media";
 
 export interface FluxPageProps {
     onMediaSelect: (media: MediaItem) => void;

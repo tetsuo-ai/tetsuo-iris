@@ -5,11 +5,12 @@ import DallePage from "./DallePage";
 import FluxPage from "./FluxPage";
 import AnimationPage from "./AnimationPage";
 import GiphyGifKeyboard from "@/components/ui/GiphyGifKeyboard";
-import type { MediaItem } from "@/components/ui/UnboundMediaList";
+import type { MediaItem } from "@/components/pages/MediaPage/SkryrPage/ui/skryr-unbound-media";
 
 export interface MediaTabsProps {
     onMediaSelect: (media: MediaItem) => void;
-    onMediaDragStart?: (media: MediaItem) => void;
+    onMediaDragStart: (media: MediaItem) => void;
+    onDoubleClick?: (index: number) => void; // Add this
 }
 
 const MediaTabs: React.FC<MediaTabsProps> = ({ onMediaSelect, onMediaDragStart }) => {
@@ -66,11 +67,11 @@ const MediaTabs: React.FC<MediaTabsProps> = ({ onMediaSelect, onMediaDragStart }
                                 y: 50,
                                 scale: 1,
                                 rotation: 0,
-                                opacity: 1,
                                 visible: true,
                                 showAt: 0,
                                 hideAt: 120,
                                 interruptOnPlay: true,
+                                isManuallyControlled: false
                             };
                             onMediaSelect(media);
                         }}

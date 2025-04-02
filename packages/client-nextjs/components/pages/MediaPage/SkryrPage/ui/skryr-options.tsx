@@ -11,7 +11,7 @@ interface SkryrOptionsProps {
         index: number;
         fileName?: string;
     } | null;
-    selectedLayer: 'background' | 'milkdrop' | 'matrix' | 'ascii' | 'allMedia' | 'reorder' | null;
+    selectedLayer: 'milkdrop' | 'matrix' | 'ascii' | 'allMedia' | 'reorder' | null; // Added 'reorder'
     renderOptionsContent: () => JSX.Element | null;
     profileColor: string;
     onDeselectElement: () => void;
@@ -31,6 +31,7 @@ const SkryrOptions: React.FC<SkryrOptionsProps> = ({
         >
             {selectedElement || selectedLayer ? (
                 <>
+                    {/* Show filename or layer name if available */}
                     {(selectedElement?.fileName || selectedLayer) && (
                         <div className="flex items-center justify-between w-full">
                             <span
@@ -56,7 +57,7 @@ const SkryrOptions: React.FC<SkryrOptionsProps> = ({
                 </>
             ) : (
                 <div className="text-xs" style={{ color: profileColor }}>
-                    Double-click an element or select a layer for options
+                    Double-click an element or layer for options
                 </div>
             )}
         </div>

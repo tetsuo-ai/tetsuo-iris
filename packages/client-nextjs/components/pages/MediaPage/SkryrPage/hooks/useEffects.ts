@@ -30,7 +30,6 @@ export const useEffects = ({
 }: UseEffectsProps) => {
     const analyserRef = useRef<AnalyserNode | null>(null);
 
-    // Audio setup
     useEffect(() => {
         const setupAudio = async () => {
             if (!audioContext) {
@@ -43,20 +42,20 @@ export const useEffects = ({
                 console.log("AudioContext resumed");
             }
 
-            analyserRef.current = (window as any).sharedAnalyser;
-            console.log("AudioContext state:", audioContext.state);
+            analyserRef.current = (window as any).sharedAnalyser || audioContext.createAnalyser();
+            analyserRef.current.fftSize = 256;
+            console.log("Analyser setup with provided audioContext");
         };
 
-        setupAudio();
+        setupAudio().catch((error) => console.error("Audio setup error:", error));
     }, [audioContext]);
 
-    // Call effects at top level
     useMatrixEffect(matrixEnabled, matrixCanvasRef, isFullscreen);
     useVisualizerEffect(
         visualizerEnabled,
         visualizerCanvasRef,
         audioContext,
-        analyserRef.current,
+        analyserRef.current ?? null, // Null check
         isFullscreen,
         isPlaying
     );
@@ -69,7 +68,6 @@ export const useEffects = ({
         computedColor
     );
 
-    // Log state changes for debugging
     useEffect(() => {
         console.log("Matrix props:", {
             matrixEnabled,

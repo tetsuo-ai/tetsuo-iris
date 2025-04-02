@@ -24,7 +24,6 @@ interface Track {
     duration: number;
 }
 
-// Load script utility with proper typing
 const loadScript = (src: string, globalCheck: () => boolean, timeout = 10000): Promise<void> => {
     return new Promise((resolve, reject) => {
         if (document.querySelector(`script[src="${src}"]`)) {
@@ -62,7 +61,6 @@ const loadScript = (src: string, globalCheck: () => boolean, timeout = 10000): P
     });
 };
 
-// Singleton instance
 let webampInstance: Webamp | null = null;
 
 const initializeWebamp = async (
@@ -127,6 +125,8 @@ const initializeWebamp = async (
         const newTrack = tracks[0];
         if (newTrack?.url) {
             onTrackDrop(newTrack.url);
+            audio.src = newTrack.url; // Sync audio element with new track
+            audio.load();
             muteWebampAudio();
         }
     };
@@ -150,10 +150,11 @@ export interface WebampMilkdropProps {
     onStop: () => void;
     onReady?: () => void;
     visualizerCanvasRef?: React.RefObject<HTMLCanvasElement>;
+    getAudioElement?: (element: HTMLAudioElement) => void; // Added prop to expose audio
 }
 
 export const WebampMilkdrop: React.FC<WebampMilkdropProps> = memo(
-    ({ onTrackDrop, isPlaying, onPlayPause, onStop, onReady, visualizerCanvasRef }) => {
+    ({ onTrackDrop, isPlaying, onPlayPause, onStop, onReady, visualizerCanvasRef, getAudioElement }) => {
         const containerRef = useRef<HTMLDivElement>(null);
         const audioRef = useRef<HTMLAudioElement>((window as any).sharedAudioElement || new Audio());
 
@@ -163,9 +164,19 @@ export const WebampMilkdrop: React.FC<WebampMilkdropProps> = memo(
             initializeWebamp(containerRef.current, visualizerCanvasRef.current, audioRef.current, onTrackDrop)
                 .then((webamp) => {
                     if (onReady) onReady();
+                    if (getAudioElement) getAudioElement(audioRef.current);
+
+                    // Resize visualizer for desktop mode
+                    const butterchurnVisualizer = webamp.__butterchurnVisualizer;
+                    if (butterchurnVisualizer && visualizerCanvasRef.current) { // Type guard
+                        const dpr = window.devicePixelRatio || 1;
+                        butterchurnVisualizer.setCanvas(visualizerCanvasRef.current); // Now safe
+                        butterchurnVisualizer.setRendererSize(window.innerWidth * dpr, window.innerHeight * dpr);
+                    }
+
                     const render = () => {
-                        if (webamp.__butterchurnVisualizer && isPlaying) {
-                            webamp.__butterchurnVisualizer.render();
+                        if (butterchurnVisualizer && isPlaying) {
+                            butterchurnVisualizer.render();
                         }
                         requestAnimationFrame(render);
                     };
@@ -174,9 +185,9 @@ export const WebampMilkdrop: React.FC<WebampMilkdropProps> = memo(
                 .catch((error) => console.error("Webamp initialization failed:", error));
 
             return () => {
-                // Cleanup logic if needed
+                // Cleanup if needed
             };
-        }, [onTrackDrop, onReady, visualizerCanvasRef]);
+        }, [onTrackDrop, onReady, visualizerCanvasRef, getAudioElement]);
 
         useEffect(() => {
             if (!webampInstance) return;
@@ -217,6 +228,7 @@ export const WebampMilkdrop: React.FC<WebampMilkdropProps> = memo(
         prevProps.onPlayPause === nextProps.onPlayPause &&
         prevProps.onStop === nextProps.onStop &&
         prevProps.onReady === nextProps.onReady &&
-        prevProps.visualizerCanvasRef === nextProps.visualizerCanvasRef
+        prevProps.visualizerCanvasRef === nextProps.visualizerCanvasRef &&
+        prevProps.getAudioElement === nextProps.getAudioElement
     )
 );

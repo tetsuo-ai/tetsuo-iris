@@ -4,6 +4,7 @@ import { useDrag } from "./hooks/useDrag";
 
 type MixBlendMode = 'normal' | 'multiply' | 'screen' | 'overlay' | 'darken' | 'lighten' | 'color-dodge' | 'color-burn' | 'hard-light' | 'soft-light' | 'difference' | 'exclusion' | 'hue' | 'saturation' | 'color' | 'luminosity';
 
+// Workspace.tsx
 interface WorkspaceProps {
     mediaList: MediaItem[];
     customTexts: CustomTextItem[];
@@ -13,7 +14,7 @@ interface WorkspaceProps {
     asciiEnabled: boolean;
     onMediaListUpdate: (list: MediaItem[]) => void;
     onCustomTextsUpdate: (texts: CustomTextItem[]) => void;
-    onSelectElement: (elem: { type: "media" | "customText"; index: number } | null) => void;
+    onSelectElement: (elem: { type: "media" | "customText"; index: number } | null, event?: React.MouseEvent) => void; // Updated
     matrixCanvasRef: React.RefObject<HTMLCanvasElement>;
     visualizerCanvasRef: React.RefObject<HTMLCanvasElement>;
     barCanvasRef: React.RefObject<HTMLCanvasElement>;
@@ -170,7 +171,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                 {mediaList.map((media, index) =>
                     media.visible ? (
                         <div
-                            key={media.src || `media-${index}`} // Use src for uniqueness, fallback to index
+                            key={media.src || `media-${index}`}
                             style={{
                                 position: "absolute",
                                 top: `${media.y}%`,
@@ -178,7 +179,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                                 transform: `translate(-50%, -50%) scale(${media.scale}) rotate(${media.rotation}deg)`,
                                 opacity: media.opacity,
                                 mixBlendMode: (media as ExtendedMediaItem).mixBlendMode || "normal",
-                                zIndex: zIndexMap['allMedia'] + index, // Incremental z-index within layer
+                                zIndex: zIndexMap['allMedia'] + index,
                                 cursor: "move",
                                 pointerEvents: "auto",
                             }}
@@ -190,7 +191,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                             onDoubleClick={(e) => {
                                 e.stopPropagation();
                                 e.preventDefault();
-                                onSelectElement({ type: "media", index });
+                                onSelectElement({ type: "media", index }, e); // Pass the event
                             }}
                         >
                             {media.type === "image" ? (
@@ -228,14 +229,14 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                 >
                     {customTexts.map((text, index) => (
                         <div
-                            key={text.id} // Assuming id is unique
+                            key={text.id}
                             style={{
                                 position: "absolute",
                                 top: `${text.y}%`,
                                 left: `${text.x}%`,
                                 transform: `translate(-50%, -50%) scale(${text.scale})`,
                                 color: text.color,
-                                zIndex: zIndexMap['ascii'] + index, // Incremental z-index within layer
+                                zIndex: zIndexMap['ascii'] + index,
                                 cursor: "move",
                                 pointerEvents: "auto",
                             }}
@@ -247,7 +248,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                             onDoubleClick={(e) => {
                                 e.stopPropagation();
                                 e.preventDefault();
-                                onSelectElement({ type: "customText", index });
+                                onSelectElement({ type: "customText", index }, e); // Pass the event
                             }}
                         >
                             <pre style={{ whiteSpace: "pre-wrap" }}>{text.text}</pre>

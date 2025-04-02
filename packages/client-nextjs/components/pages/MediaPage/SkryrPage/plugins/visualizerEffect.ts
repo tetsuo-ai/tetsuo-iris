@@ -84,7 +84,8 @@ export const useVisualizerEffect = (
                 height: canvas.height,
             });
 
-            visualizerRef.current.connectAudio(analyser);
+            // Don’t call connectAudio; assume analyser is already in the audio chain
+            console.log("Visualizer initialized with analyser in chain");
 
             const presets = bcPresets.getPresets();
             if (presets && presets["Flexi"]) {
@@ -111,7 +112,7 @@ export const useVisualizerEffect = (
         if (!visualizerEnabled || !visualizerRef.current || !isPlaying) return;
 
         const render = () => {
-            console.log("Visualizer rendering"); // Debug log
+            console.log("Visualizer rendering");
             visualizerRef.current.render();
             animationFrameIdRef.current = requestAnimationFrame(render);
         };

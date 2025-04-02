@@ -86,6 +86,9 @@ interface SkryrPaletteProps {
     setBackgroundAutoplay: React.Dispatch<React.SetStateAction<boolean>>;
     fps: number;
     audioData: Uint8Array;
+    showAudioPanel?: boolean;
+    setShowAudioPanel?: (value: boolean) => void;
+    renderAudioControls?: () => JSX.Element;
 }
 
 const usePaletteDrag = (initialPosition: { x: number; y: number } | null, setPosition: (pos: { x: number; y: number }) => void) => {
@@ -294,6 +297,8 @@ const SkryrPalette: React.FC<SkryrPaletteProps> = ({
         });
     }, [setLayerOrder]);
 
+    
+
     const LayerControls = React.memo(({
         layer,
         blendMode,
@@ -337,6 +342,7 @@ const SkryrPalette: React.FC<SkryrPaletteProps> = ({
                     </Button>
                 </div>
             </div>
+            
             {expandedLayers[layer] && (
                 <div className="flex flex-col gap-1">
                     {blendMode && setBlendMode && (

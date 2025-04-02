@@ -2,19 +2,20 @@
 
 import React from "react";
 import { useState } from "react";
-import { useSkryrColor } from "./skryr/SkryrColorContext";
+import { useSkryrColor } from "./skryr-color-context";
+
 export interface MediaItem {
-    type: "image" | "video" | "audio";
+    type: "audio" | "video" | "image";
     src: string;
     x: number;
     y: number;
     scale: number;
     rotation: number;
-    opacity: number;
     visible: boolean;
+    interruptOnPlay: boolean;
+    isManuallyControlled: boolean;
     showAt: number;
     hideAt: number;
-    interruptOnPlay?: boolean;
 }
 
 interface UnboundMediaListProps {
