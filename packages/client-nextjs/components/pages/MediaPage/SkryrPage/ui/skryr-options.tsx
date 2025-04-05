@@ -26,7 +26,7 @@ const SkryrOptions: React.FC<SkryrOptionsProps> = ({
 }) => {
     return (
         <div
-            className="p-4 space-y-2 flex flex-col items-center rounded-lg shadow-lg w-[220px] max-w-[220px]"
+            className="p-4 space-y-2 flex flex-col items-center rounded-lg shadow-lg w-[300px]"
             style={{ backgroundColor: "rgba(255, 255, 255, 0.8)" }}
         >
             {selectedElement || selectedLayer ? (

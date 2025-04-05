@@ -1400,276 +1400,378 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
     );
 
     const renderOptionsContent = useCallback(() => {
-        if (!selectedElement || selectedElement.index >= mediaList.length) return null;
-        const media = mediaList[selectedElement.index];
+        if (!selectedElement) return null;
 
-        const updateMediaProperty = (property: keyof ExtendedMediaItem, value: any) => {
-            setMediaList(prev => {
-                const newList = [...prev];
-                newList[selectedElement.index] = { ...newList[selectedElement.index], [property]: value };
-                return newList;
-            });
-        };
+        // Handle media items
+        if (selectedElement.type === "media") {
+            if (selectedElement.index >= mediaList.length) return null;
+            const media = mediaList[selectedElement.index];
 
-        const centerMedia = () => {
-            updateMediaProperty("x", 50);
-            updateMediaProperty("y", 50);
-        };
+            const updateMediaProperty = (property: keyof ExtendedMediaItem, value: any) => {
+                setMediaList(prev => {
+                    const newList = [...prev];
+                    newList[selectedElement.index] = { ...newList[selectedElement.index], [property]: value };
+                    return newList;
+                });
+            };
 
-        const scaleToCover = () => {
-            const workspaceWidth = workspaceDimensions.width;
-            const workspaceHeight = workspaceDimensions.height;
-            const mediaElement = document.querySelector(`#media-${media.type}-${selectedElement.index}`) as HTMLImageElement | HTMLVideoElement;
-            const scale = mediaElement
-                ? Math.max(workspaceWidth / (mediaElement instanceof HTMLVideoElement ? mediaElement.videoWidth : mediaElement.naturalWidth),
-                    workspaceHeight / (mediaElement instanceof HTMLVideoElement ? mediaElement.videoHeight : mediaElement.naturalHeight))
-                : Math.max(workspaceWidth / 200, workspaceHeight / 200);
-            updateMediaProperty("scale", scale);
-        };
+            const centerMedia = () => {
+                updateMediaProperty("x", 50);
+                updateMediaProperty("y", 50);
+            };
 
-        const deleteMedia = () => {
-            setMediaList(prev => prev.filter((_, i) => i !== selectedElement.index));
-            setKeyMappings(prev => prev.map(mapping => {
-                if (!mapping || mapping.assignedIndex === null) return mapping; // Skip if null or unmapped
-                if (mapping.assignedIndex === selectedElement.index) {
-                    return { ...mapping, assignedIndex: null };
-                }
-                if (mapping.assignedIndex > selectedElement.index) {
-                    return { ...mapping, assignedIndex: mapping.assignedIndex - 1 };
-                }
-                return mapping;
-            }));
-            setSelectedElement(null);
-        };
+            const scaleToCover = () => {
+                const workspaceWidth = workspaceDimensions.width;
+                const workspaceHeight = workspaceDimensions.height;
+                const mediaElement = document.querySelector(`#media-${media.type}-${selectedElement.index}`) as HTMLImageElement | HTMLVideoElement;
+                const scale = mediaElement
+                    ? Math.max(workspaceWidth / (mediaElement instanceof HTMLVideoElement ? mediaElement.videoWidth : mediaElement.naturalWidth),
+                        workspaceHeight / (mediaElement instanceof HTMLVideoElement ? mediaElement.videoHeight : mediaElement.naturalHeight))
+                    : Math.max(workspaceWidth / 200, workspaceHeight / 200);
+                updateMediaProperty("scale", scale);
+            };
 
-        const updateMode = (mode: "toggle" | "launchpad" | "oneshot" | "playPause") => {
-            setKeyMappings(prev => {
-                const mappingIndex = prev.findIndex(m => m && m.assignedIndex === selectedElement.index);
-                if (mappingIndex !== -1) {
-                    const newMappings = [...prev];
-                    newMappings[mappingIndex] = { ...newMappings[mappingIndex]!, mode }; // Non-null assertion since we found it
-                    return newMappings;
-                }
-                // If no mapping exists, add a new one
-                return [...prev, {
-                    key: `unmapped-${selectedElement.index}`,
-                    assignedIndex: selectedElement.index,
-                    mappingType: media.type === "audio" ? "audio" : "media",
-                    mode,
-                }];
-            });
-        };
+            const deleteMedia = () => {
+                setMediaList(prev => prev.filter((_, i) => i !== selectedElement.index));
+                setKeyMappings(prev => prev.map(mapping => {
+                    if (!mapping || mapping.assignedIndex === null) return mapping;
+                    if (mapping.assignedIndex === selectedElement.index) {
+                        return { ...mapping, assignedIndex: null };
+                    }
+                    if (mapping.assignedIndex > selectedElement.index) {
+                        return { ...mapping, assignedIndex: mapping.assignedIndex - 1 };
+                    }
+                    return mapping;
+                }));
+                setSelectedElement(null);
+            };
 
-        const currentMapping = keyMappings.find((m): m is KeyMapping => m != null && m.assignedIndex === selectedElement.index);
-        const currentMode = currentMapping?.mode || "toggle"; // Fallback to "toggle" if no mapping
+            const updateMode = (mode: "toggle" | "launchpad" | "oneshot" | "playPause") => {
+                setKeyMappings(prev => {
+                    const mappingIndex = prev.findIndex(m => m && m.assignedIndex === selectedElement.index);
+                    if (mappingIndex !== -1) {
+                        const newMappings = [...prev];
+                        newMappings[mappingIndex] = { ...newMappings[mappingIndex]!, mode };
+                        return newMappings;
+                    }
+                    return [...prev, {
+                        key: `unmapped-${selectedElement.index}`,
+                        assignedIndex: selectedElement.index,
+                        mappingType: media.type === "audio" ? "audio" : "media",
+                        mode,
+                    }];
+                });
+            };
 
-        return (
-            <div className="flex flex-col gap-1" style={{ backgroundColor: "rgba(0, 0, 0, 0.8)", padding: "4px", minWidth: "220px" }}>
-                {/* Common Controls */}
-                <div className="flex items-center gap-1">
-                    <i className="fa-solid fa-eye-slash text-xs" />
-                    <Slider
-                        min={0}
-                        max={1}
-                        step={0.01}
-                        value={[media.opacity]}
-                        onValueChange={(value) => updateMediaProperty("opacity", value[0])}
-                        className="w-full h-2"
-                        style={{ accentColor: computedColor }}
-                    />
-                </div>
+            const currentMapping = keyMappings.find((m): m is KeyMapping => m != null && m.assignedIndex === selectedElement.index);
+            const currentMode = currentMapping?.mode || "toggle";
 
-                {/* Type-Specific Controls */}
-                {media.type === "image" && (
-                    <>
-                        <div className="flex items-center gap-1">
-                            <i className="fa-solid fa-expand text-xs" />
-                            <Slider
-                                min={0.1}
-                                max={10}
-                                step={0.1}
-                                value={[media.scale]}
-                                onValueChange={(value) => updateMediaProperty("scale", value[0])}
-                                className="w-full h-2"
-                                style={{ accentColor: computedColor }}
-                            />
-                        </div>
-                        <div className="flex items-center gap-1">
-                            <i className="fa-solid fa-rotate text-xs" />
-                            <Slider
-                                min={0}
-                                max={360}
-                                step={1}
-                                value={[media.rotation]}
-                                onValueChange={(value) => updateMediaProperty("rotation", value[0])}
-                                className="w-full h-2"
-                                style={{ accentColor: computedColor }}
-                            />
-                        </div>
-                        <div className="flex items-center gap-1">
-                            <i className="fa-solid fa-arrows-left-right text-xs" />
-                            <Slider
-                                min={0}
-                                max={100}
-                                step={1}
-                                value={[media.x]}
-                                onValueChange={(value) => updateMediaProperty("x", value[0])}
-                                className="w-full h-2"
-                                style={{ accentColor: computedColor }}
-                            />
-                        </div>
-                        <div className="flex items-center gap-1">
-                            <i className="fa-solid fa-arrows-up-down text-xs" />
-                            <Slider
-                                min={0}
-                                max={100}
-                                step={1}
-                                value={[media.y]}
-                                onValueChange={(value) => updateMediaProperty("y", value[0])}
-                                className="w-full h-2"
-                                style={{ accentColor: computedColor }}
-                            />
-                        </div>
-                    </>
-                )}
-
-                {media.type === "video" && (
-                    <>
-                        <div className="flex items-center gap-1">
-                            <i className="fa-solid fa-expand text-xs" />
-                            <Slider
-                                min={0.1}
-                                max={10}
-                                step={0.1}
-                                value={[media.scale]}
-                                onValueChange={(value) => updateMediaProperty("scale", value[0])}
-                                className="w-full h-2"
-                                style={{ accentColor: computedColor }}
-                            />
-                        </div>
-                        <div className="flex items-center gap-1">
-                            <i className="fa-solid fa-rotate text-xs" />
-                            <Slider
-                                min={0}
-                                max={360}
-                                step={1}
-                                value={[media.rotation]}
-                                onValueChange={(value) => updateMediaProperty("rotation", value[0])}
-                                className="w-full h-2"
-                                style={{ accentColor: computedColor }}
-                            />
-                        </div>
-                        <div className="flex items-center gap-1">
-                            <i className="fa-solid fa-sliders text-xs" />
-                            <input
-                                type="checkbox"
-                                checked={media.showControls || false}
-                                onChange={(e) => updateMediaProperty("showControls", e.target.checked)}
-                            />
-                        </div>
-                    </>
-                )}
-
-                {media.type === "audio" && (
+            return (
+                <div className="flex flex-col gap-1" style={{ backgroundColor: "rgba(0, 0, 0, 0.8)", padding: "4px", minWidth: "220px" }}>
+                    {/* Common Controls */}
                     <div className="flex items-center gap-1">
-                        <i className="fa-solid fa-volume-high text-xs" />
+                        <i className="fa-solid fa-eye-slash text-xs" />
                         <Slider
                             min={0}
                             max={1}
                             step={0.01}
-                            value={[media.opacity]} // Proxy for volume
+                            value={[media.opacity]}
                             onValueChange={(value) => updateMediaProperty("opacity", value[0])}
                             className="w-full h-2"
                             style={{ accentColor: computedColor }}
                         />
                     </div>
-                )}
 
-                {media.type === "text" && (
-                    <>
+                    {/* Type-Specific Controls */}
+                    {media.type === "image" && (
+                        <>
+                            <div className="flex items-center gap-1">
+                                <i className="fa-solid fa-expand text-xs" />
+                                <Slider
+                                    min={0.1}
+                                    max={10}
+                                    step={0.1}
+                                    value={[media.scale]}
+                                    onValueChange={(value) => updateMediaProperty("scale", value[0])}
+                                    className="w-full h-2"
+                                    style={{ accentColor: computedColor }}
+                                />
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <i className="fa-solid fa-rotate text-xs" />
+                                <Slider
+                                    min={0}
+                                    max={360}
+                                    step={1}
+                                    value={[media.rotation]}
+                                    onValueChange={(value) => updateMediaProperty("rotation", value[0])}
+                                    className="w-full h-2"
+                                    style={{ accentColor: computedColor }}
+                                />
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <i className="fa-solid fa-arrows-left-right text-xs" />
+                                <Slider
+                                    min={0}
+                                    max={100}
+                                    step={1}
+                                    value={[media.x]}
+                                    onValueChange={(value) => updateMediaProperty("x", value[0])}
+                                    className="w-full h-2"
+                                    style={{ accentColor: computedColor }}
+                                />
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <i className="fa-solid fa-arrows-up-down text-xs" />
+                                <Slider
+                                    min={0}
+                                    max={100}
+                                    step={1}
+                                    value={[media.y]}
+                                    onValueChange={(value) => updateMediaProperty("y", value[0])}
+                                    className="w-full h-2"
+                                    style={{ accentColor: computedColor }}
+                                />
+                            </div>
+                        </>
+                    )}
+
+                    {media.type === "video" && (
+                        <>
+                            <div className="flex items-center gap-1">
+                                <i className="fa-solid fa-expand text-xs" />
+                                <Slider
+                                    min={0.1}
+                                    max={10}
+                                    step={0.1}
+                                    value={[media.scale]}
+                                    onValueChange={(value) => updateMediaProperty("scale", value[0])}
+                                    className="w-full h-2"
+                                    style={{ accentColor: computedColor }}
+                                />
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <i className="fa-solid fa-rotate text-xs" />
+                                <Slider
+                                    min={0}
+                                    max={360}
+                                    step={1}
+                                    value={[media.rotation]}
+                                    onValueChange={(value) => updateMediaProperty("rotation", value[0])}
+                                    className="w-full h-2"
+                                    style={{ accentColor: computedColor }}
+                                />
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <i className="fa-solid fa-sliders text-xs" />
+                                <input
+                                    type="checkbox"
+                                    checked={media.showControls || false}
+                                    onChange={(e) => updateMediaProperty("showControls", e.target.checked)}
+                                />
+                            </div>
+                        </>
+                    )}
+
+                    {media.type === "audio" && (
                         <div className="flex items-center gap-1">
-                            <i className="fa-solid fa-font text-xs" />
-                            <input
-                                type="number"
-                                min={8}
-                                max={72}
-                                step={1}
-                                value={parseInt(media.transform?.match(/font-size:(\d+)/)?.[1] || "16")}
-                                onChange={(e) => updateMediaProperty("transform", `font-size:${e.target.value}px`)}
-                                className="bg-gray-800 text-white p-1 rounded w-12"
+                            <i className="fa-solid fa-volume-high text-xs" />
+                            <Slider
+                                min={0}
+                                max={1}
+                                step={0.01}
+                                value={[media.opacity]}
+                                onValueChange={(value) => updateMediaProperty("opacity", value[0])}
+                                className="w-full h-2"
+                                style={{ accentColor: computedColor }}
                             />
                         </div>
-                        <div className="flex items-center gap-1">
-                            <i className="fa-solid fa-palette text-xs" />
-                            <input
-                                type="color"
-                                value={media.textContent?.match(/color:(#[0-9A-Fa-f]{6})/)?.[1] || "#FFFFFF"}
-                                onChange={(e) => updateMediaProperty("textContent", `${media.textContent || ""} color:${e.target.value}`)}
-                                className="w-12 h-6"
-                            />
-                        </div>
-                    </>
-                )}
+                    )}
 
-                {/* Action Buttons */}
-                <div className="flex gap-1 mt-1">
-                    <Button
-                        onClick={centerMedia}
-                        className="bg-transparent hover:bg-gray-900 flex-1 p-1"
-                        title="Center"
-                    >
-                        <i className="fa-solid fa-align-center" />
-                    </Button>
-                    <Button
-                        onClick={scaleToCover}
-                        className="bg-transparent hover:bg-gray-900 flex-1 p-1"
-                        title="Scale to Cover"
-                    >
-                        <i className="fa-solid fa-arrows-alt" />
-                    </Button>
-                    <Button
-                        onClick={deleteMedia}
-                        className="bg-transparent hover:bg-red-900 flex-1 p-1"
-                        title="Delete"
-                    >
-                        <i className="fa-solid fa-trash" />
-                    </Button>
-                </div>
+                    {media.type === "text" && (
+                        <>
+                            <div className="flex items-center gap-1">
+                                <i className="fa-solid fa-font text-xs" />
+                                <input
+                                    type="number"
+                                    min={8}
+                                    max={72}
+                                    step={1}
+                                    value={parseInt(media.transform?.match(/font-size:(\d+)/)?.[1] || "16")}
+                                    onChange={(e) => updateMediaProperty("transform", `font-size:${e.target.value}px`)}
+                                    className="bg-gray-800 text-white p-1 rounded w-12"
+                                />
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <i className="fa-solid fa-palette text-xs" />
+                                <input
+                                    type="color"
+                                    value={media.textContent?.match(/color:(#[0-9A-Fa-f]{6})/)?.[1] || "#FFFFFF"}
+                                    onChange={(e) => updateMediaProperty("textContent", `${media.textContent || ""} color:${e.target.value}`)}
+                                    className="w-12 h-6"
+                                />
+                            </div>
+                        </>
+                    )}
 
-                {/* Mode Selection */}
-                <div className="flex gap-1 mt-1">
-                    <Button
-                        onClick={() => updateMode("toggle")}
-                        className={`bg-transparent hover:bg-gray-900 flex-1 p-1 ${currentMode === "toggle" ? "border-2 border-white" : ""}`}
-                        title="Toggle"
-                    >
-                        <i className="fa-solid fa-toggle-on" />
-                    </Button>
-                    <Button
-                        onClick={() => updateMode("launchpad")}
-                        className={`bg-transparent hover:bg-gray-900 flex-1 p-1 ${currentMode === "launchpad" ? "border-2 border-white" : ""}`}
-                        title="Launchpad"
-                    >
-                        <i className="fa-solid fa-rocket" />
-                    </Button>
-                    <Button
-                        onClick={() => updateMode("oneshot")}
-                        className={`bg-transparent hover:bg-gray-900 flex-1 p-1 ${currentMode === "oneshot" ? "border-2 border-white" : ""}`}
-                        title="Oneshot"
-                    >
-                        <i className="fa-solid fa-arrow-right" />
-                    </Button>
-                    <Button
-                        onClick={() => updateMode("playPause")}
-                        className={`bg-transparent hover:bg-gray-900 flex-1 p-1 ${currentMode === "playPause" ? "border-2 border-white" : ""}`}
-                        title="Play/Pause"
-                    >
-                        <i className="fa-solid fa-circle-pause" />
-                    </Button>
+                    {/* Action Buttons */}
+                    <div className="flex gap-1 mt-1">
+                        <Button
+                            onClick={centerMedia}
+                            className="bg-transparent hover:bg-gray-900 flex-1 p-1"
+                            title="Center"
+                        >
+                            <i className="fa-solid fa-align-center" />
+                        </Button>
+                        <Button
+                            onClick={scaleToCover}
+                            className="bg-transparent hover:bg-gray-900 flex-1 p-1"
+                            title="Scale to Cover"
+                        >
+                            <i className="fa-solid fa-arrows-alt" />
+                        </Button>
+                        <Button
+                            onClick={deleteMedia}
+                            className="bg-transparent hover:bg-red-900 flex-1 p-1"
+                            title="Delete"
+                        >
+                            <i className="fa-solid fa-trash" />
+                        </Button>
+                    </div>
+
+                    {/* Mode Selection */}
+                    <div className="flex gap-1 mt-1">
+                        <Button
+                            onClick={() => updateMode("toggle")}
+                            className={`bg-transparent hover:bg-gray-900 flex-1 p-1 ${currentMode === "toggle" ? "border-2 border-white" : ""}`}
+                            title="Toggle"
+                        >
+                            <i className="fa-solid fa-toggle-on" />
+                        </Button>
+                        <Button
+                            onClick={() => updateMode("launchpad")}
+                            className={`bg-transparent hover:bg-gray-900 flex-1 p-1 ${currentMode === "launchpad" ? "border-2 border-white" : ""}`}
+                            title="Launchpad"
+                        >
+                            <i className="fa-solid fa-rocket" />
+                        </Button>
+                        <Button
+                            onClick={() => updateMode("oneshot")}
+                            className={`bg-transparent hover:bg-gray-900 flex-1 p-1 ${currentMode === "oneshot" ? "border-2 border-white" : ""}`}
+                            title="Oneshot"
+                        >
+                            <i className="fa-solid fa-arrow-right" />
+                        </Button>
+                        <Button
+                            onClick={() => updateMode("playPause")}
+                            className={`bg-transparent hover:bg-gray-900 flex-1 p-1 ${currentMode === "playPause" ? "border-2 border-white" : ""}`}
+                            title="Play/Pause"
+                        >
+                            <i className="fa-solid fa-circle-pause" />
+                        </Button>
+                    </div>
                 </div>
-            </div>
-        );
-    }, [selectedElement, mediaList, setMediaList, computedColor, workspaceDimensions, setKeyMappings]);
+            );
+        }
+
+        // Handle custom text items
+        if (selectedElement.type === "customText") {
+            if (selectedElement.index >= customTexts.length) return null;
+            const text = customTexts[selectedElement.index];
+
+            const updateTextProperty = (property: keyof CustomTextItem, value: any) => {
+                setCustomTexts(prev => {
+                    const newList = [...prev];
+                    newList[selectedElement.index] = { ...newList[selectedElement.index], [property]: value };
+                    return newList;
+                });
+            };
+
+            const deleteText = () => {
+                setCustomTexts(prev => prev.filter((_, i) => i !== selectedElement.index));
+                setSelectedElement(null);
+            };
+
+            return (
+                <div className="flex flex-col gap-1" style={{ backgroundColor: "rgba(0, 0, 0, 0.8)", padding: "4px", minWidth: "220px" }}>
+                    {/* Scale */}
+                    <div className="flex items-center gap-1">
+                        <i className="fa-solid fa-expand text-xs" />
+                        <Slider
+                            min={0.1}
+                            max={10}
+                            step={0.1}
+                            value={[text.scale]}
+                            onValueChange={(value) => updateTextProperty("scale", value[0])}
+                            className="w-full h-2"
+                            style={{ accentColor: computedColor }}
+                        />
+                    </div>
+
+                    {/* X Position */}
+                    <div className="flex items-center gap-1">
+                        <i className="fa-solid fa-arrows-left-right text-xs" />
+                        <Slider
+                            min={0}
+                            max={100}
+                            step={1}
+                            value={[text.x]}
+                            onValueChange={(value) => updateTextProperty("x", value[0])}
+                            className="w-full h-2"
+                            style={{ accentColor: computedColor }}
+                        />
+                    </div>
+
+                    {/* Y Position */}
+                    <div className="flex items-center gap-1">
+                        <i className="fa-solid fa-arrows-up-down text-xs" />
+                        <Slider
+                            min={0}
+                            max={100}
+                            step={1}
+                            value={[text.y]}
+                            onValueChange={(value) => updateTextProperty("y", value[0])}
+                            className="w-full h-2"
+                            style={{ accentColor: computedColor }}
+                        />
+                    </div>
+
+                    {/* Text Content */}
+                    <div className="flex flex-col gap-1">
+                        <textarea
+                            value={text.text}
+                            onChange={(e) => updateTextProperty("text", e.target.value)}
+                            className="bg-gray-800 text-white p-1 rounded w-full h-20 resize-none"
+                            placeholder="Edit text..."
+                        />
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-1 mt-1">
+                        <Button
+                            onClick={() => {
+                                updateTextProperty("x", 50);
+                                updateTextProperty("y", 50);
+                            }}
+                            className="bg-transparent hover:bg-gray-900 flex-1 p-1"
+                            title="Center"
+                        >
+                            <i className="fa-solid fa-align-center" />
+                        </Button>
+                        <Button
+                            onClick={deleteText}
+                            className="bg-transparent hover:bg-red-900 flex-1 p-1"
+                            title="Delete"
+                        >
+                            <i className="fa-solid fa-trash" />
+                        </Button>
+                    </div>
+                </div>
+            );
+        }
+
+        return null;
+    }, [selectedElement, mediaList, setMediaList, customTexts, setCustomTexts, computedColor, workspaceDimensions, setKeyMappings]);
 
     const webampProps: WebampMilkdropProps = {
         onTrackDrop: (url: string) => {

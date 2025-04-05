@@ -93,25 +93,37 @@ interface SkryrPaletteProps {
     renderAudioControls?: () => JSX.Element;
 }
 
-const usePaletteDrag = (initialPosition: { x: number; y: number } | null, setPosition: (pos: { x: number; y: number }) => void) => {
+const usePaletteDrag = (
+    initialPosition: { x: number; y: number } | null,
+    setPosition: (pos: { x: number; y: number }) => void,
+    paletteRef: React.RefObject<HTMLDivElement>
+) => {
     const handleDragHandleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-        if ((e.target as HTMLElement).closest("input, button, select")) return;
+        console.log("Drag started");
         e.preventDefault();
 
         const startX = e.clientX;
         const startY = e.clientY;
         const initPos = initialPosition ? { ...initialPosition } : { x: 0, y: 0 };
+        const palette = paletteRef.current;
+        if (!palette) return;
+
+        const paletteWidth = palette.offsetWidth;
+        const paletteHeight = palette.offsetHeight;
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
 
         const onMouseMove = (ev: MouseEvent) => {
             const deltaX = ev.clientX - startX;
             const deltaY = ev.clientY - startY;
-            setPosition({
-                x: initPos.x + deltaX,
-                y: initPos.y + deltaY,
-            });
+            const newX = Math.max(-(paletteWidth / 2), Math.min(initPos.x + deltaX, viewportWidth - (paletteWidth / 2)));
+            const newY = Math.max(0, Math.min(initPos.y + deltaY, viewportHeight - paletteHeight));
+            console.log(`Dragging to: x=${newX}, y=${newY}`);
+            setPosition({ x: newX, y: newY });
         };
 
         const onMouseUp = () => {
+            console.log("Drag ended");
             window.removeEventListener("mousemove", onMouseMove);
             window.removeEventListener("mouseup", onMouseUp);
         };
@@ -232,12 +244,12 @@ const SkryrPalette: React.FC<SkryrPaletteProps> = ({
         }
     }, [internalComputedColor, setComputedColor, externalComputedColor]);
 
-    const { handleDragHandleMouseDown } = usePaletteDrag(position, setPosition);
+    const { handleDragHandleMouseDown } = usePaletteDrag(position, setPosition, paletteRef);
 
     useEffect(() => {
         if (!position) {
             setPosition({
-                x: 0,
+                x: 0, // Centered offset
                 y: window.innerHeight - 444,
             });
         }
@@ -340,7 +352,7 @@ const SkryrPalette: React.FC<SkryrPaletteProps> = ({
                         className="w-5 h-5 text-xs bg-transparent hover:bg-gray-900 disabled:opacity-50"
                         title="Move Up"
                     >
-                        <i className="fa-solid fa-arrow-up" />
+                        <i className="fa-solid fa.arrow-up" />
                     </Button>
                     <Button
                         onClick={(e) => { e.stopPropagation(); moveLayerDown(layer); }}
@@ -353,7 +365,7 @@ const SkryrPalette: React.FC<SkryrPaletteProps> = ({
                 </div>
             </div>
             {expandedLayers[layer] && (
-                <div className="flex flex-col gap-0.5"> {/* Tighter gap */}
+                <div className="flex flex-col gap-0.5">
                     {blendMode && setBlendMode && (
                         <select
                             value={blendMode}
@@ -501,7 +513,7 @@ const SkryrPalette: React.FC<SkryrPaletteProps> = ({
         prevProps.saturation === nextProps.saturation);
 
     const renderLayerContent = useCallback(() => (
-        <div style={{ backgroundColor: "rgba(0, 0, 0, 0.8)", padding: "4px", minWidth: "220px" }}>
+        <div style={{ backgroundColor: "rgba(0, 0, 0, 0.8)", padding: "4px" }}>
             <h2 className="text-md font-bold mb-1">Layer & Effects</h2>
             <div className="flex flex-col gap-1">
                 <Button
@@ -605,29 +617,27 @@ const SkryrPalette: React.FC<SkryrPaletteProps> = ({
         backgroundX, setBackgroundX, backgroundY, setBackgroundY,
         backgroundLoop, setBackgroundLoop, backgroundAutoplay, setBackgroundAutoplay,
     ]);
-    const openPanels = [
-        showLayerPanel,
-        lastInteractionWasDoubleClick && selectedElement && renderOptionsContent,
-        showSliders && !(lastInteractionWasDoubleClick && selectedElement),
-    ].filter(Boolean).length;
-    const paletteWidth = openPanels === 0 ? "0px" : `${openPanels * 220}px`;
+
+    const showMediaOptions = !!selectedElement;
 
     return (
         <div
             ref={paletteRef}
-            className="fixed z-[10010] rounded-lg overflow-hidden flex flex-col SkryrPalette"
+            className="fixed z-[10010] rounded-lg overflow-hidden flex flex-row gap-2 SkryrPalette"
             style={{
                 color: computedColor,
                 backgroundColor: "rgba(0, 0, 0, 0.8)",
                 borderRadius: "8px",
-                left: position ? `${position.x}px` : "0px",
+                left: "50%",
+                transform: `translateX(${position ? position.x : 0}px) translateX(-50%)`,
                 top: position ? `${position.y}px` : `${window.innerHeight - 444}px`,
-                width: "100%",
+                width: showPalette ? "fit-content" : "0px",
                 height: "auto",
                 minHeight: "444px",
-                display: showPalette ? "flex" : "none",
+                display: "flex",
                 pointerEvents: "auto",
                 boxShadow: "0 2px 8px rgba(0, 0, 0, 0.5)",
+                transition: "width 0.3s ease-in-out",
             }}
         >
             <style>{`
@@ -637,20 +647,19 @@ const SkryrPalette: React.FC<SkryrPaletteProps> = ({
                     fill: currentColor !important;
                     stroke: currentColor !important;
                 }
-                .SkryrPalette .right-panel {
-                    position: absolute;
-                    top: 36px;
-                    transition: transform 0.3s ease;
-                    background-color: rgba(0, 0, 0, 0.8);
-                    padding: 2px;
-                    max-height: 408px;
-                    overflow-y: auto;
+                .animate-panel {
+                    animation: rollOut 0.3s ease-in-out forwards;
                 }
-                .SkryrPalette .right-panel-closed {
-                    transform: translateX(100%);
+                .panel-closed {
+                    animation: retract 0.3s ease-in-out forwards;
                 }
-                .SkryrPalette .right-panel-open {
-                    transform: translateX(0);
+                @keyframes rollOut {
+                    from { width: 0; opacity: 0; }
+                    to { width: auto; opacity: 1; }
+                }
+                @keyframes retract {
+                    from { width: auto; opacity: 1; }
+                    to { width: 0; opacity: 0; }
                 }
             `}</style>
 
@@ -666,15 +675,17 @@ const SkryrPalette: React.FC<SkryrPaletteProps> = ({
 
             {/* Drag Handle */}
             <div
-                className="relative w-full flex justify-center items-center"
+                className="absolute w-full flex justify-center items-center"
                 onMouseDown={handleDragHandleMouseDown}
                 style={{
-                    zIndex: 2,
+                    zIndex: 3,
                     backgroundColor: "rgba(0,0,0,0.8)",
                     borderRadius: "8px 8px 0 0",
                     cursor: "grab",
-                    padding: "2px 4px", // Tighter padding
-                    height: "32px", // Reduced height
+                    padding: "2px 4px",
+                    height: "32px",
+                    top: 0,
+                    pointerEvents: "auto",
                 }}
             >
                 <span className="text-sm font-bold">
@@ -692,37 +703,57 @@ const SkryrPalette: React.FC<SkryrPaletteProps> = ({
             </div>
 
             {/* Main Content */}
-            <div className="relative flex flex-row w-full" style={{ zIndex: 2, padding: "0", flexGrow: 1 }}>
-                {/* Center Content (Children, e.g., SkryrToolbar) */}
-                <div className="flex flex-col items-stretch justify-between w-full h-full">
-                    {children}
-                </div>
-                {/* Right Panels */}
+            <div className="relative flex flex-row w-full" style={{ zIndex: 2, paddingTop: "32px", flexGrow: 1 }}>
+                {/* Children (Middle Section, e.g., SkryrToolbar) */}
+                {children && (
+                    <div className="flex flex-col items-stretch justify-between h-full">
+                        {children}
+                    </div>
+                )}
+
+                {/* Effects & Layers Panel */}
                 <div
-                    className={`right-panel ${showLayerPanel ? "right-panel-open" : "right-panel-closed"}`}
-                    style={{ right: lastInteractionWasDoubleClick && selectedElement ? "220px" : "0px", minWidth: "220px", zIndex: 2 }}
+                    className={`transition-all duration-300 ease-in-out p-2 bg-black/80 rounded-lg shadow-lg animate-panel ${showLayerPanel ? "panel-open" : "panel-closed"
+                        }`}
+                    style={{
+                        width: showLayerPanel ? "244px" : "0px",
+                        height: "auto",
+                        opacity: showLayerPanel ? 1 : 0,
+                        visibility: showLayerPanel ? "visible" : "hidden",
+                        overflowY: "hidden",
+                    }}
                 >
-                    {showLayerPanel && (
-                        <div className="right-panel-open">
-                            {renderLayerContent()}
-                        </div>
-                    )}
+                    {showLayerPanel && renderLayerContent()}
                 </div>
+
+                {/* Media Options Panel */}
                 <div
-                    className={`right-panel ${lastInteractionWasDoubleClick && selectedElement && renderOptionsContent ? "right-panel-open" : "right-panel-closed"}`}
-                    style={{ right: "0px", minWidth: "220px", zIndex: 3 }}
+                    className={`transition-all duration-300 ease-in-out p-2 bg-black/80 rounded-lg shadow-lg animate-panel ${showMediaOptions ? "panel-open" : "panel-closed"
+                        }`}
+                    style={{
+                        width: showMediaOptions ? "288px" : "0px",
+                        height: "auto",
+                        opacity: showMediaOptions ? 1 : 0,
+                        visibility: showMediaOptions ? "visible" : "hidden",
+                        overflowY: "hidden",
+                    }}
                 >
-                    {lastInteractionWasDoubleClick && selectedElement && renderOptionsContent && (
-                        <div className="right-panel-open">
-                            {renderOptionsContent()}
-                        </div>
-                    )}
+                    {showMediaOptions && renderOptionsContent && renderOptionsContent()}
                 </div>
+
+                {/* Sliders Panel */}
                 <div
-                    className={`right-panel ${showSliders && !(lastInteractionWasDoubleClick && selectedElement) ? "right-panel-open" : "right-panel-closed"}`}
-                    style={{ right: showLayerPanel ? "220px" : "0px", minWidth: "220px", zIndex: 1 }}
+                    className={`transition-all duration-300 ease-in-out p-2 bg-black/80 rounded-lg shadow-lg animate-panel ${showSliders ? "panel-open" : "panel-closed"
+                        }`}
+                    style={{
+                        width: showSliders ? "220px" : "0px",
+                        height: "auto",
+                        opacity: showSliders ? 1 : 0,
+                        visibility: showSliders ? "visible" : "hidden",
+                        overflowY: "hidden",
+                    }}
                 >
-                    {showSliders && !(lastInteractionWasDoubleClick && selectedElement) && (
+                    {showSliders && (
                         <div className="flex flex-col gap-0.5">
                             <Slider
                                 min={0}

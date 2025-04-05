@@ -31,7 +31,6 @@ const UnboundMediaList: React.FC<UnboundMediaListProps> = ({
     onOpenOptions,
 }) => {
     // Compute indices of bound media with null safety
-    console.log("keyMappings before filter:", keyMappings); // Debug log
     const boundIndices = keyMappings
         .filter((mapping) => mapping && mapping.assignedIndex !== null)
         .map((mapping) => mapping!.assignedIndex!);
