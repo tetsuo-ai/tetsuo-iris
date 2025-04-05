@@ -5,12 +5,12 @@ import DallePage from "./DallePage";
 import FluxPage from "./FluxPage";
 import AnimationPage from "./AnimationPage";
 import GiphyGifKeyboard from "@/components/ui/GiphyGifKeyboard";
-import type { MediaItem } from "@/components/pages/MediaPage/SkryrPage/ui/skryr-unbound-media";
+import type { MediaItem } from "@/components/pages/MediaPage/SkryrPage/Workspace"; // Import from Workspace
 
 export interface MediaTabsProps {
     onMediaSelect: (media: MediaItem) => void;
     onMediaDragStart: (media: MediaItem) => void;
-    onDoubleClick?: (index: number) => void; // Add this
+    onDoubleClick?: (index: number) => void;
 }
 
 const MediaTabs: React.FC<MediaTabsProps> = ({ onMediaSelect, onMediaDragStart }) => {
@@ -59,19 +59,18 @@ const MediaTabs: React.FC<MediaTabsProps> = ({ onMediaSelect, onMediaDragStart }
                 {activeTab === "gif" && (
                     <GiphyGifKeyboard
                         onGifSelect={(gifUrl: string) => {
-                            // Wrap the GIF URL into a MediaItem
                             const media: MediaItem = {
+                                id: `media-${Date.now()}`, // Required by Workspace
                                 type: "image",
                                 src: gifUrl,
                                 x: 50,
                                 y: 50,
                                 scale: 1,
                                 rotation: 0,
+                                opacity: 1, // Required by Workspace
                                 visible: true,
                                 showAt: 0,
                                 hideAt: 120,
-                                interruptOnPlay: true,
-                                isManuallyControlled: false
                             };
                             onMediaSelect(media);
                         }}

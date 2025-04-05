@@ -1215,10 +1215,11 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
             setIsStreaming(false);
         }
     }, [isStreaming, mediaRecorder, streamBitrate, streamResolution, streamServerUrl, streamKey, isFFmpegLoaded]);
+   
     useEffect(() => {
         const keyMap = new Map<string, KeyMapping>(
             keyMappings
-                .filter((m): m is KeyMapping => m != null && m.key !== undefined) // Exclude null and undefined
+                .filter((m): m is KeyMapping => m != null && m.key !== undefined)
                 .map(m => [m.key.toUpperCase(), m] as const)
         );
 
@@ -1243,7 +1244,7 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
                 default:
                     const mapping = keyMap.get(keyUpper);
                     if (mapping && mapping.assignedIndex !== null) {
-                        const mediaIndex = mapping.assignedIndex!; // Non-null assertion
+                        const mediaIndex = mapping.assignedIndex!; // Non-null assertion is correct
                         setMediaList(prev => {
                             const newList = [...prev];
                             const media = newList[mediaIndex];
@@ -1428,11 +1429,16 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
 
         const deleteMedia = () => {
             setMediaList(prev => prev.filter((_, i) => i !== selectedElement.index));
-            setKeyMappings(prev => prev.map(mapping =>
-                mapping && mapping.assignedIndex === selectedElement.index ? { ...mapping, assignedIndex: null } :
-                    mapping && mapping.assignedIndex > selectedElement.index ? { ...mapping, assignedIndex: mapping.assignedIndex - 1 } :
-                        mapping
-            ));
+            setKeyMappings(prev => prev.map(mapping => {
+                if (!mapping || mapping.assignedIndex === null) return mapping; // Skip if null or unmapped
+                if (mapping.assignedIndex === selectedElement.index) {
+                    return { ...mapping, assignedIndex: null };
+                }
+                if (mapping.assignedIndex > selectedElement.index) {
+                    return { ...mapping, assignedIndex: mapping.assignedIndex - 1 };
+                }
+                return mapping;
+            }));
             setSelectedElement(null);
         };
 
@@ -1513,7 +1519,7 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
                             />
                         </div>
                         <div className="flex items-center gap-1">
-                            <i className="fa-solid fa-arrows-up -down text-xs" />
+                            <i className="fa-solid fa-arrows-up-down text-xs" />
                             <Slider
                                 min={0}
                                 max={100}

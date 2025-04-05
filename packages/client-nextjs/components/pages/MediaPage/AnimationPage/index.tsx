@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertErrorMessage } from "@/components/shared/AlertErrorMessage";
-import type { MediaItem } from "@/components/pages/MediaPage/SkryrPage/ui/skryr-unbound-media";
+import { MediaItem } from "../SkryrPage/Workspace"; // Import from Workspace.tsx
 
 export interface AnimationPageProps {
     onMediaSelect: (media: MediaItem) => void;
@@ -35,7 +35,6 @@ const AnimationPage: React.FC<AnimationPageProps> = ({ onMediaSelect, initialMed
     const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         setIsDragActive(false);
-        // Clear previous selections
         setFile(null);
         setSelectedMedia(null);
         setDroppedURL(null);
@@ -99,6 +98,7 @@ const AnimationPage: React.FC<AnimationPageProps> = ({ onMediaSelect, initialMed
                         if (text.startsWith("http")) {
                             const isVideo = text.match(/\.(mp4|webm)$/i);
                             const newMedia: MediaItem = {
+                                id: `media-${isVideo ? "video" : "image"}-${Date.now()}`, // Required by Workspace
                                 type: isVideo ? "video" : "image",
                                 src: text,
                                 x: 50,
@@ -109,7 +109,6 @@ const AnimationPage: React.FC<AnimationPageProps> = ({ onMediaSelect, initialMed
                                 visible: true,
                                 showAt: 0,
                                 hideAt: 120,
-                                interruptOnPlay: true,
                             };
                             setSelectedMedia(newMedia);
                             setFile(null);
@@ -120,6 +119,7 @@ const AnimationPage: React.FC<AnimationPageProps> = ({ onMediaSelect, initialMed
                     if (text.startsWith("http")) {
                         const isVideo = text.match(/\.(mp4|webm)$/i);
                         const newMedia: MediaItem = {
+                            id: `media-${isVideo ? "video" : "image"}-${Date.now()}`, // Required by Workspace
                             type: isVideo ? "video" : "image",
                             src: text,
                             x: 50,
@@ -130,7 +130,6 @@ const AnimationPage: React.FC<AnimationPageProps> = ({ onMediaSelect, initialMed
                             visible: true,
                             showAt: 0,
                             hideAt: 120,
-                            interruptOnPlay: true,
                         };
                         setSelectedMedia(newMedia);
                         setFile(null);
@@ -235,6 +234,7 @@ const AnimationPage: React.FC<AnimationPageProps> = ({ onMediaSelect, initialMed
         e.stopPropagation();
         if (videoUrl) {
             const media: MediaItem = {
+                id: `media-video-${Date.now()}`, // Required by Workspace
                 type: "video",
                 src: videoUrl,
                 x: 50,
@@ -245,7 +245,6 @@ const AnimationPage: React.FC<AnimationPageProps> = ({ onMediaSelect, initialMed
                 visible: true,
                 showAt: 0,
                 hideAt: 120,
-                interruptOnPlay: true,
             };
             onMediaSelect(media);
         }
@@ -254,6 +253,7 @@ const AnimationPage: React.FC<AnimationPageProps> = ({ onMediaSelect, initialMed
     const handleVideoDragStart = (e: React.DragEvent<HTMLDivElement>) => {
         if (videoUrl) {
             const mediaItem: MediaItem = {
+                id: `media-video-${Date.now()}`, // Required by Workspace
                 type: "video",
                 src: videoUrl,
                 x: 50,
@@ -264,7 +264,6 @@ const AnimationPage: React.FC<AnimationPageProps> = ({ onMediaSelect, initialMed
                 visible: true,
                 showAt: 0,
                 hideAt: 120,
-                interruptOnPlay: true,
             };
             const data = JSON.stringify(mediaItem);
             e.dataTransfer.setData("application/x-media", data);
@@ -281,7 +280,7 @@ const AnimationPage: React.FC<AnimationPageProps> = ({ onMediaSelect, initialMed
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
-            className={`"w-full space-y-4 max-w-screen-md mx-auto transition-colors ${isDragActive ? "p-4 border-dashed border-2 border-gray-300" : ""}`}
+            className={`w-full space-y-4 max-w-screen-md mx-auto transition-colors ${isDragActive ? "p-4 border-dashed border-2 border-gray-300" : ""}`}
         >
             <div className="text-center">
                 <h1 className="text-2xl font-bold">Create RGB Animation</h1>
@@ -349,17 +348,16 @@ const AnimationPage: React.FC<AnimationPageProps> = ({ onMediaSelect, initialMed
                     className="w-1/5"
                 />
             </div>
-                {/* Row 4: Action Buttons */}
-                <div className="flex gap-2 mt-4">
- 
+            {/* Row 4: Action Buttons */}
+            <div className="flex gap-2 mt-4">
                 <Button onClick={randomizeParams} variant="outline" className="flex-1 h-10">
                     Random
                 </Button>
                 <Button onClick={handleSubmitAnimation} disabled={isLoading} variant="outline" className="flex-1 h-10">
                     {isLoading ? "Submitting..." : "Generate"}
                 </Button>
-                </div>
-        
+            </div>
+
             {error && <AlertErrorMessage message={error} />}
             {/* Video Preview */}
             {videoUrl && (

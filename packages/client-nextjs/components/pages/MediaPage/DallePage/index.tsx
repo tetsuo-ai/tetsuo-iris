@@ -5,10 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertErrorMessage } from "@/components/shared/AlertErrorMessage";
 import { Select } from "@/components/ui/select";
-import type { MediaItem } from "@/components/pages/MediaPage/SkryrPage/ui/skryr-unbound-media";
+import { MediaItem } from "../SkryrPage/Workspace"; // Import from Workspace.tsx
 
 export interface DallePageProps {
-    onMediaSelect: (media: MediaItem) => void; 
+    onMediaSelect: (media: MediaItem) => void;
     onMediaDragStart?: (media: MediaItem) => void;
 }
 
@@ -73,6 +73,7 @@ const DallePage: React.FC<DallePageProps> = ({ onMediaSelect }) => {
         e.stopPropagation();
         if (response) {
             const media: MediaItem = {
+                id: `media-${Date.now()}`, // Added required id
                 type: "image",
                 src: response,
                 x: 50,
@@ -83,7 +84,6 @@ const DallePage: React.FC<DallePageProps> = ({ onMediaSelect }) => {
                 visible: true,
                 showAt: 0,
                 hideAt: 120,
-                interruptOnPlay: true,
             };
             onMediaSelect(media);
         }
@@ -101,12 +101,9 @@ const DallePage: React.FC<DallePageProps> = ({ onMediaSelect }) => {
 
     return (
         <div className="space-y-6 p-4 max-w-md mx-auto">
-            {/* Header */}
             <div className="text-center">
                 <h1 className="text-2xl font-bold">Generate DALL‑E Image</h1>
             </div>
-
-            {/* Prompt */}
             <div>
                 <Textarea
                     placeholder="Enter your prompt"
@@ -116,43 +113,46 @@ const DallePage: React.FC<DallePageProps> = ({ onMediaSelect }) => {
                     className="w-full h-10"
                 />
             </div>
-
-            {/* Controls */}
             <div className="w-full space-y-2">
-                {/* Row 1: Model, Size, Quality */}
                 <div className="flex gap-2 items-center">
                     <Select
                         value={model}
                         onChange={(e) => setModel(e.target.value)}
                         options={modelOptions}
-                        className="flex-1" computedColor={""}                    />
+                        className="flex-1"
+                        computedColor={""}
+                    />
                     <Select
                         value={size}
                         onChange={(e) => setSize(e.target.value)}
                         options={sizeOptions}
-                        className="flex-1" computedColor={""}                    />
+                        className="flex-1"
+                        computedColor={""}
+                    />
                     <Select
                         value={quality}
                         onChange={(e) => setQuality(e.target.value)}
                         options={qualityOptions}
-                        className="flex-1" computedColor={""}                    />
+                        className="flex-1"
+                        computedColor={""}
+                    />
                 </div>
-
-                {/* Row 2: Style, Number of Images */}
                 <div className="flex gap-2 items-center">
                     <Select
                         value={style}
                         onChange={(e) => setStyle(e.target.value)}
                         options={styleOptions}
-                        className="flex-1" computedColor={""}                    />
+                        className="flex-1"
+                        computedColor={""}
+                    />
                     <Select
                         value={n}
                         onChange={(e) => setN(e.target.value)}
                         options={["1"]}
-                        className="flex-1" computedColor={""}                    />
+                        className="flex-1"
+                        computedColor={""}
+                    />
                 </div>
-
-                {/* Row 3: Random and Generate Buttons */}
                 <div className="flex gap-2 items-center">
                     <Button
                         onClick={randomizeParams}
@@ -171,10 +171,7 @@ const DallePage: React.FC<DallePageProps> = ({ onMediaSelect }) => {
                     </Button>
                 </div>
             </div>
-
             {error && <AlertErrorMessage message={error} />}
-
-            {/* Generated Image Preview */}
             {response && (
                 <div className="mt-4 text-center">
                     <img

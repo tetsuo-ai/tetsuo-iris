@@ -246,8 +246,30 @@ const SkryrToolbar: React.FC<SkryrToolbarProps> = ({
                 }}
             >
                 <MediaTabs
-                    onMediaSelect={(media) => setMediaList((prev) => [...prev, { ...media, type: media.type as ExtendedMediaType, opacity: 1 }])}
-                    onMediaDragStart={(media) => setMediaList((prev) => [...prev, { ...media, type: media.type as ExtendedMediaType, opacity: 1 }])}
+                    onMediaSelect={(media) =>
+                        setMediaList((prev) => [
+                            ...prev,
+                            {
+                                ...media,
+                                type: media.type as ExtendedMediaType,
+                                opacity: media.opacity ?? 1, // Ensure opacity is set
+                                interruptOnPlay: media.interruptOnPlay ?? true, // Default to true
+                                isManuallyControlled: media.isManuallyControlled ?? false, // Default to false
+                            },
+                        ])
+                    }
+                    onMediaDragStart={(media) =>
+                        setMediaList((prev) => [
+                            ...prev,
+                            {
+                                ...media,
+                                type: media.type as ExtendedMediaType,
+                                opacity: media.opacity ?? 1, // Ensure opacity is set
+                                interruptOnPlay: media.interruptOnPlay ?? true, // Default to true
+                                isManuallyControlled: media.isManuallyControlled ?? false, // Default to false
+                            },
+                        ])
+                    }
                 />
             </div>
 

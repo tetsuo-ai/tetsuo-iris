@@ -35,12 +35,11 @@ export const useEffects = ({
         if (!audioContext || analyserRef.current) return;
 
         const setupAudio = async () => {
-            // Use shared analyser if available, otherwise create a new one
-            analyserRef.current = (window as any).sharedAnalyser || audioContext.createAnalyser();
-            analyserRef.current.fftSize = 256;
+            const analyser = (window as any).sharedAnalyser || audioContext.createAnalyser();
+            analyser.fftSize = 256;
+            analyserRef.current = analyser; // Assign after configuration
             console.log("Analyser setup with provided audioContext");
 
-            // Resume context only if suspended
             if (audioContext.state === "suspended") {
                 await audioContext.resume();
                 console.log("AudioContext resumed");
@@ -56,7 +55,7 @@ export const useEffects = ({
         visualizerEnabled,
         visualizerCanvasRef,
         audioContext,
-        analyserRef.current, // No null check needed; TypeScript knows it’s AnalyserNode | null
+        analyserRef.current, // No assertion needed; useVisualizerEffect handles null
         isFullscreen,
         isPlaying
     );
@@ -69,7 +68,7 @@ export const useEffects = ({
         computedColor
     );
 
-    // Debug logging for matrix effect (optional, can be removed in production)
+    // Debug logging for matrix effect
     useEffect(() => {
         console.log("Matrix props:", {
             matrixEnabled,
