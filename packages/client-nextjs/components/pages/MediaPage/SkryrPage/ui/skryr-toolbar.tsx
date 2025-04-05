@@ -176,7 +176,6 @@ const SkryrToolbar: React.FC<SkryrToolbarProps> = ({
     }, []);
 
     const { computedColor } = useSkryrColor();
-    const [showMediaOptions, setShowMediaOptions] = React.useState(false);
 
     const toggleAllPanels = () => {
         setShowPalette((prev) => !prev);
@@ -195,7 +194,6 @@ const SkryrToolbar: React.FC<SkryrToolbarProps> = ({
     const handleMediaDoubleClick = (index: number) => {
         const media = mediaList[index];
         setSelectedElement({ type: media.type === "text" ? "customText" : "media", index });
-        setShowMediaOptions(true);
     };
 
     const unboundMediaList: MediaItem[] = mediaList
@@ -213,72 +211,6 @@ const SkryrToolbar: React.FC<SkryrToolbarProps> = ({
             showAt: item.showAt,
             hideAt: item.hideAt,
         }));
-
-    const renderMediaOptions = () => {
-        if (!selectedElement || selectedElement.index >= mediaList.length) return null;
-        const media = mediaList[selectedElement.index];
-
-        const updateMediaProperty = (property: keyof ExtendedMediaItem, value: any) => {
-            setMediaList(prev => {
-                const newList = [...prev];
-                newList[selectedElement.index] = { ...newList[selectedElement.index], [property]: value };
-                return newList;
-            });
-        };
-
-        const isMediaType = ["image", "gif", "video"].includes(media.type);
-
-        return (
-            <div className="flex flex-col gap-2 text-white">
-                <h3 className="text-lg font-semibold">Media Options</h3>
-
-                {isMediaType && (
-                    <>
-                        <div className="flex flex-col gap-1">
-                            <span>Opacity: {Math.round(media.opacity * 100)}%</span>
-                            <Slider
-                                min={0}
-                                max={1}
-                                step={0.01}
-                                value={[media.opacity]}
-                                onValueChange={(value) => updateMediaProperty("opacity", value[0])}
-                                className="w-full"
-                                style={{ accentColor: computedColor }}
-                            />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                            <span>Rotation</span>
-                            <input
-                                type="number"
-                                value={parseInt(media.transform?.match(/rotate\((\d+)/)?.[1] || "0")}
-                                onChange={(e) => updateMediaProperty("transform", `rotate(${e.target.value}deg)`)}
-                                className="bg-gray-800 text-white p-1 rounded"
-                            />
-                        </div>
-                    </>
-                )}
-
-                {media.type === "text" && (
-                    <div className="flex flex-col gap-1">
-                        <span>Text Content</span>
-                        <textarea
-                            value={media.textContent || ""}
-                            onChange={(e) => updateMediaProperty("textContent", e.target.value)}
-                            className="bg-gray-800 text-white p-2 rounded h-24 resize-y"
-                            placeholder="Enter ASCII/text content"
-                        />
-                    </div>
-                )}
-
-                <Button
-                    onClick={() => setShowMediaOptions(false)}
-                    className="bg-gray-700 hover:bg-gray-600 mt-2"
-                >
-                    Close
-                </Button>
-            </div>
-        );
-    };
 
     return (
         <div
@@ -403,7 +335,10 @@ const SkryrToolbar: React.FC<SkryrToolbarProps> = ({
                             <i className="fa-solid fa-compact-disc text-xl" />
                         </Button>
                         <Button
-                            onClick={handleClearAllMedia}
+                            onClick={() => {
+                                console.log("Clear All Media button clicked");
+                                handleClearAllMedia();
+                            }}
                             className="p-4 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors"
                             style={{ backgroundColor: computedColor }}
                             title="Clear All Media"
@@ -411,7 +346,10 @@ const SkryrToolbar: React.FC<SkryrToolbarProps> = ({
                             <i className="fa-solid fa-eraser text-xl" />
                         </Button>
                         <Button
-                            onClick={handleClear404Media}
+                            onClick={() => {
+                                console.log("Clear 404 Media button clicked");
+                                handleClear404Media();
+                            }}
                             className="p-4 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors"
                             style={{ backgroundColor: computedColor }}
                             title="Clear 404 Media"
@@ -485,19 +423,6 @@ const SkryrToolbar: React.FC<SkryrToolbarProps> = ({
                     </div>
                 </div>
             )}
-
-            <div
-                className={`transition-all duration-300 ease-in-out p-2 bg-black/80 rounded-lg shadow-lg animate-panel ${showMediaOptions ? "panel-open" : "panel-closed"}`}
-                style={{
-                    width: showMediaOptions ? "300px" : "0px",
-                    maxHeight: showMediaOptions ? "calc(100vh - 100px)" : "0px",
-                    opacity: showMediaOptions ? 1 : 0,
-                    visibility: showMediaOptions ? "visible" : "hidden",
-                    overflowY: "auto",
-                }}
-            >
-                {renderMediaOptions()}
-            </div>
 
             <style>{`
                 .animate-panel {

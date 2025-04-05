@@ -31,7 +31,10 @@ export const useVisualizerEffect = (
 ) => {
     const visualizerRef = useRef<any>(null);
     const animationFrameIdRef = useRef<number | null>(null);
+    const isInitializedRef = useRef(false);
+    const lastRenderRef = useRef(0);
 
+    // Preload scripts once on mount
     useEffect(() => {
         const preloadScripts = async () => {
             try {
@@ -45,8 +48,10 @@ export const useVisualizerEffect = (
         preloadScripts();
     }, []);
 
+    // Initialize visualizer only once
     useEffect(() => {
-        if (!visualizerEnabled || !canvasRef.current || !audioContext || !analyser) return;
+        if (!visualizerEnabled || !canvasRef.current || !audioContext || !analyser || isInitializedRef.current) return;
+
         const canvas = canvasRef.current;
         const gl = canvas.getContext("webgl2");
         if (!gl) {
@@ -84,8 +89,8 @@ export const useVisualizerEffect = (
                 height: canvas.height,
             });
 
-            // Don’t call connectAudio; assume analyser is already in the audio chain
             console.log("Visualizer initialized with analyser in chain");
+            isInitializedRef.current = true;
 
             const presets = bcPresets.getPresets();
             if (presets && presets["Flexi"]) {
@@ -106,14 +111,25 @@ export const useVisualizerEffect = (
                 cancelAnimationFrame(animationFrameIdRef.current);
             }
         };
-    }, [visualizerEnabled, canvasRef, audioContext, analyser, isFullscreen]);
+    }, [visualizerEnabled, canvasRef, audioContext, analyser]);
 
+    // Optimized rendering loop
     useEffect(() => {
         if (!visualizerEnabled || !visualizerRef.current || !isPlaying) return;
 
         const render = () => {
-            console.log("Visualizer rendering");
+            const now = performance.now();
+            if (now - lastRenderRef.current < 16) { // Throttle to ~60fps
+                animationFrameIdRef.current = requestAnimationFrame(render);
+                return;
+            }
+            lastRenderRef.current = now;
+
+            const start = performance.now();
             visualizerRef.current.render();
+            const duration = performance.now() - start;
+            if (duration > 50) console.warn(`Visualizer render took ${duration}ms`);
+
             animationFrameIdRef.current = requestAnimationFrame(render);
         };
         animationFrameIdRef.current = requestAnimationFrame(render);

@@ -1,26 +1,8 @@
+// VirtualKeyboard.tsx
 import React from "react";
 import { topRow, secondRow, thirdRow, fourthRow, numpadRow } from "./hooks/useMediaState";
+import { ExtendedMediaItem } from "./ui/skryr-toolbar";
 
-// Re-export the keyboard rows for use in SkryrPage.tsx
-export { topRow, secondRow, thirdRow, fourthRow, numpadRow };
-
-// Export MediaItem interface
-export interface MediaItem {
-    type: "image" | "video" | "audio";
-    src: string;
-    x: number;
-    y: number;
-    scale: number;
-    rotation: number;
-    opacity: number;
-    visible: boolean;
-    showAt: number;
-    hideAt: number;
-    isManuallyControlled?: boolean;
-    interruptOnPlay?: boolean;
-}
-
-// Export KeyMapping interface
 export interface KeyMapping {
     key: string;
     assignedIndex: number | null;
@@ -28,13 +10,14 @@ export interface KeyMapping {
     mode: "toggle" | "launchpad" | "oneshot" | "playPause";
 }
 
-interface VirtualKeyboardProps {
+export interface VirtualKeyboardProps {
     keyMappings: KeyMapping[];
-    mediaList: MediaItem[];
-    setKeyMappings: (mappings: KeyMapping[]) => void;
-    setMediaList: (mediaList: MediaItem[]) => void;
+    mediaList: ExtendedMediaItem[]; // Changed from MediaItem to ExtendedMediaItem
+    setKeyMappings: React.Dispatch<React.SetStateAction<KeyMapping[]>>;
+    setMediaList: React.Dispatch<React.SetStateAction<ExtendedMediaItem[]>>; // Changed from MediaItem to ExtendedMediaItem
     computedColor: string;
     onSelectElement?: (elem: { type: "media" | "customText"; index: number } | null) => void;
+    checkMediaValidity?: (item: ExtendedMediaItem, index: number) => void;
 }
 
 export const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
@@ -44,6 +27,7 @@ export const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
     setMediaList,
     computedColor,
     onSelectElement,
+    checkMediaValidity,
 }) => {
     const renderKeyboardRow = (row: string[], startIndex: number) => (
         <div className="flex gap-1 mb-1 justify-center">
@@ -72,31 +56,49 @@ export const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
                         className={`w-8 h-8 flex items-center justify-center text-xs rounded cursor-pointer select-none transition-all ${borderStyle} ${borderWidth}`}
                         style={{ borderColor: computedColor, backgroundColor: "rgba(0, 0, 0, 0.8)" }}
                         draggable
-                        onDragStart={(e) => e.dataTransfer.setData("mapping-index", mappingIndex.toString())}
+                        onDragStart={(e) => {
+                            if (mapping.assignedIndex !== null) {
+                                e.dataTransfer.setData("application/x-media-index", mapping.assignedIndex.toString());
+                            }
+                        }}
                         onDragOver={(e) => e.preventDefault()}
                         onDrop={(e) => {
                             e.preventDefault();
+                            e.stopPropagation();
+                            console.log("Drop event triggered with data:", e.dataTransfer.getData("application/x-media-index"));
 
-                            // Handle mapping index swap
-                            const srcMappingIndexStr = e.dataTransfer.getData("mapping-index");
-                            if (srcMappingIndexStr) {
-                                const srcIdx = parseInt(srcMappingIndexStr, 10);
-                                const newMappings = [...keyMappings];
-                                [newMappings[mappingIndex], newMappings[srcIdx]] = [newMappings[srcIdx], newMappings[mappingIndex]];
-                                setKeyMappings(newMappings);
-                                return;
-                            }
-
-                            // Handle existing media index
+                            // Handle drag from UnboundMediaList
                             const mediaIndexData = e.dataTransfer.getData("application/x-media-index");
                             if (mediaIndexData) {
                                 const mediaIndex = parseInt(mediaIndexData, 10);
-                                if (!isNaN(mediaIndex)) {
+                                console.log("Dragging media index:", mediaIndex, "Media at index:", mediaList[mediaIndex]);
+                                if (!isNaN(mediaIndex) && mediaList[mediaIndex]) {
                                     const newMappings = [...keyMappings];
-                                    newMappings[mappingIndex].assignedIndex = mediaIndex;
-                                    newMappings[mappingIndex].mappingType = "media";
-                                    newMappings[mappingIndex].mode = "toggle";
+                                    // Ensure all indices up to mappingIndex are populated
+                                    for (let i = 0; i <= mappingIndex; i++) {
+                                        if (!newMappings[i]) {
+                                            newMappings[i] = {
+                                                key: String.fromCharCode(48 + i), // e.g., "0", "1", "2", ...
+                                                assignedIndex: null,
+                                                mappingType: "media",
+                                                mode: "toggle",
+                                            };
+                                        }
+                                    }
+                                    newMappings[mappingIndex] = {
+                                        key: keyLabel,
+                                        assignedIndex: mediaIndex,
+                                        mappingType: mediaList[mediaIndex].type === "audio" ? "audio" : "media",
+                                        mode: "toggle",
+                                    };
                                     setKeyMappings(newMappings);
+                                    console.log(`Bound existing media ${mediaList[mediaIndex].src} to key ${keyLabel} at index ${mediaIndex}`);
+                                    if (onSelectElement) {
+                                        onSelectElement({ type: "media", index: mediaIndex });
+                                    }
+                                    return;
+                                } else {
+                                    console.error("Invalid media index or media not found:", mediaIndex);
                                     return;
                                 }
                             }
@@ -106,18 +108,18 @@ export const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
                             if (files && files.length > 0) {
                                 const file = files[0];
                                 const fileType = file.type;
-                                let newType: MediaItem["type"] = "image";
+                                let newType: ExtendedMediaItem["type"] = "image";
 
                                 if (fileType.startsWith("video/")) newType = "video";
                                 else if (fileType.startsWith("audio/")) newType = "audio";
                                 else if (fileType.startsWith("image/")) newType = "image";
 
                                 const src = URL.createObjectURL(file);
-                                const newMedia: MediaItem = {
+                                const newMedia: ExtendedMediaItem = {
                                     type: newType,
                                     src: src,
-                                    x: 50,
-                                    y: 50,
+                                    x: 0,
+                                    y: 0,
                                     scale: 1,
                                     rotation: 0,
                                     opacity: 1,
@@ -125,46 +127,46 @@ export const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
                                     showAt: 0,
                                     hideAt: 120,
                                     interruptOnPlay: true,
+                                    isManuallyControlled: true,
+                                    mixBlendMode: "normal",
+                                    showControls: newType === "video",
                                 };
 
-                                const newList = [...mediaList, newMedia];
-                                setMediaList(newList);
-                                const newMappings = [...keyMappings];
-                                newMappings[mappingIndex].assignedIndex = newList.length - 1;
-                                newMappings[mappingIndex].mappingType = newType === "audio" ? "audio" : "media";
-                                newMappings[mappingIndex].mode = "toggle";
-                                setKeyMappings(newMappings);
+                                setMediaList((prev: ExtendedMediaItem[]) => {
+                                    const newList = [...prev, newMedia];
+                                    const newIndex = newList.length - 1;
+                                    setKeyMappings((prevMappings: KeyMapping[]) => {
+                                        const newMappings = [...prevMappings];
+                                        // Ensure all indices up to mappingIndex are populated
+                                        for (let i = 0; i <= mappingIndex; i++) {
+                                            if (!newMappings[i]) {
+                                                newMappings[i] = {
+                                                    key: String.fromCharCode(48 + i), // e.g., "0", "1", "2", ...
+                                                    assignedIndex: null,
+                                                    mappingType: "media",
+                                                    mode: "toggle",
+                                                };
+                                            }
+                                        }
+                                        newMappings[mappingIndex] = {
+                                            key: keyLabel,
+                                            assignedIndex: newIndex,
+                                            mappingType: newType === "audio" ? "audio" : "media",
+                                            mode: "toggle",
+                                        };
+                                        console.log(`Bound new local media ${src} to key ${keyLabel} at index ${newIndex}`);
+                                        console.log("Updated keyMappings:", newMappings);
+                                        if (onSelectElement) {
+                                            onSelectElement({ type: "media", index: newIndex });
+                                        }
+                                        return newMappings;
+                                    });
+                                    if (checkMediaValidity) {
+                                        checkMediaValidity(newMedia, newIndex);
+                                    }
+                                    return newList;
+                                });
                                 return;
-                            }
-
-                            // Handle web URL drop
-                            const textData = e.dataTransfer.getData("text/plain");
-                            if (textData && textData.startsWith("http")) {
-                                let newType: MediaItem["type"] = "image";
-                                if (textData.match(/\.(jpeg|jpg|png|gif)$/i)) newType = "image";
-                                else if (textData.match(/\.(mp4|webm)$/i)) newType = "video";
-                                else if (textData.match(/\.(mp3|wav)$/i)) newType = "audio";
-
-                                const newMedia: MediaItem = {
-                                    type: newType,
-                                    src: textData,
-                                    x: 50,
-                                    y: 50,
-                                    scale: 1,
-                                    rotation: 0,
-                                    opacity: 1,
-                                    visible: true,
-                                    showAt: 0,
-                                    hideAt: 120,
-                                    interruptOnPlay: true,
-                                };
-                                const newList = [...mediaList, newMedia];
-                                setMediaList(newList);
-                                const newMappings = [...keyMappings];
-                                newMappings[mappingIndex].assignedIndex = newList.length - 1;
-                                newMappings[mappingIndex].mappingType = newType === "audio" ? "audio" : "media";
-                                newMappings[mappingIndex].mode = "toggle";
-                                setKeyMappings(newMappings);
                             }
                         }}
                         onClick={() => {

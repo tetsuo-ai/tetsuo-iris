@@ -1,20 +1,41 @@
 import React from "react";
-import { MediaItem, CustomTextItem } from "./hooks/useMediaState";
+import { CustomTextItem } from "./hooks/useMediaState";
 import { useDrag } from "./hooks/useDrag";
 
-type MixBlendMode = 'normal' | 'multiply' | 'screen' | 'overlay' | 'darken' | 'lighten' | 'color-dodge' | 'color-burn' | 'hard-light' | 'soft-light' | 'difference' | 'exclusion' | 'hue' | 'saturation' | 'color' | 'luminosity';
+export type MixBlendMode = 'normal' | 'multiply' | 'screen' | 'overlay' | 'darken' | 'lighten' | 'color-dodge' | 'color-burn' | 'hard-light' | 'soft-light' | 'difference' | 'exclusion' | 'hue' | 'saturation' | 'color' | 'luminosity';
 
-// Workspace.tsx
+export interface MediaItem {
+    id: string;
+    type: "image" | "video" | "audio" | "text";
+    src: string;
+    x: number;
+    y: number;
+    scale: number;
+    rotation: number;
+    opacity: number;
+    visible: boolean;
+    showAt: number;
+    hideAt: number;
+    isManuallyControlled?: boolean;
+    interruptOnPlay?: boolean;
+    showControls?: boolean;
+    mixBlendMode?: MixBlendMode;
+    optimizedSrc?: string;
+    transform?: string;
+    textContent?: string;
+}
+
 interface WorkspaceProps {
     mediaList: MediaItem[];
     customTexts: CustomTextItem[];
+    setCustomTexts: React.Dispatch<React.SetStateAction<CustomTextItem[]>>;
     isFullscreen: boolean;
     workspaceDimensions: { width: number; height: number };
     zoomLevel: number;
     asciiEnabled: boolean;
-    onMediaListUpdate: (list: MediaItem[]) => void;
+    onMediaListUpdate: React.Dispatch<React.SetStateAction<MediaItem[]>>;
     onCustomTextsUpdate: (texts: CustomTextItem[]) => void;
-    onSelectElement: (elem: { type: "media" | "customText"; index: number } | null, event?: React.MouseEvent) => void; // Updated
+    onSelectElement: (elem: { type: "media" | "customText"; index: number } | null, event?: React.MouseEvent) => void;
     matrixCanvasRef: React.RefObject<HTMLCanvasElement>;
     visualizerCanvasRef: React.RefObject<HTMLCanvasElement>;
     barCanvasRef: React.RefObject<HTMLCanvasElement>;
@@ -37,11 +58,14 @@ interface WorkspaceProps {
     asciiSaturation: number;
     allMediaSaturation: number;
     layerOrder: string[];
+    onDropMedia?: (e: React.DragEvent<HTMLDivElement>) => void;
+    onDragOver?: (e: React.DragEvent<HTMLDivElement>) => void;
 }
 
 export const Workspace: React.FC<WorkspaceProps> = ({
     mediaList,
     customTexts,
+    setCustomTexts,
     isFullscreen,
     workspaceDimensions,
     zoomLevel,
@@ -71,11 +95,20 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     asciiSaturation,
     allMediaSaturation,
     layerOrder,
+    onDropMedia,
+    onDragOver,
 }) => {
     const { onImageMouseDown, onCustomTextMouseDown } = useDrag(
         mediaList,
         customTexts,
-        onMediaListUpdate,
+        (updatedList) => {
+            // Transform DragMediaItem[] to WorkspaceMediaItem[] by adding id
+            const transformedList = updatedList.map((item, index) => ({
+                ...item,
+                id: mediaList.find(m => m.src === item.src)?.id || `media-${item.type}-${index}`, // Preserve existing id or generate new
+            }));
+            onMediaListUpdate(transformedList);
+        },
         onCustomTextsUpdate
     );
 
@@ -89,15 +122,16 @@ export const Workspace: React.FC<WorkspaceProps> = ({
             const mediaIndex = parseInt(mediaIndexData, 10);
             if (!isNaN(mediaIndex) && mediaList[mediaIndex]) {
                 const mediaToImport = { ...mediaList[mediaIndex], visible: false };
-                onMediaListUpdate([...mediaList, mediaToImport]);
+                onMediaListUpdate(prev => [...prev, mediaToImport]);
             }
+        } else if (onDropMedia) {
+            onDropMedia(e);
         }
     };
 
-    // Adjusted z-index mapping to ensure proper stacking and visibility
     const zIndexMap: { [key: string]: number } = {};
     layerOrder.forEach((layer, index) => {
-        zIndexMap[layer] = index * 10; // Increment by 10 to allow room for sub-elements
+        zIndexMap[layer] = index * 10;
     });
 
     return (
@@ -116,9 +150,8 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                 pointerEvents: "none",
             }}
             onDrop={handleDrop}
-            onDragOver={(e) => e.preventDefault()}
+            onDragOver={onDragOver || ((e) => e.preventDefault())}
         >
-            {/* Milkdrop Layer */}
             <canvas
                 ref={visualizerCanvasRef}
                 style={{
@@ -132,10 +165,9 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                     mixBlendMode: milkdropMixBlendMode,
                     opacity: milkdropOpacity,
                     filter: `contrast(${milkdropGamma}) saturate(${milkdropSaturation})`,
-                    background: "transparent", // Ensure no solid background
+                    background: "transparent",
                 }}
             />
-            {/* Matrix Layer */}
             <canvas
                 ref={matrixCanvasRef}
                 style={{
@@ -149,10 +181,9 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                     mixBlendMode: matrixMixBlendMode,
                     opacity: matrixOpacity,
                     filter: `contrast(${matrixGamma}) saturate(${matrixSaturation})`,
-                    background: "transparent", // Ensure no solid background
+                    background: "transparent",
                 }}
             />
-            {/* All Media Layer */}
             <div
                 style={{
                     position: "absolute",
@@ -165,33 +196,35 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                     filter: `contrast(${allMediaGamma}) saturate(${allMediaSaturation})`,
                     zIndex: zIndexMap['allMedia'],
                     pointerEvents: "none",
-                    background: "transparent", // Ensure no solid background
+                    background: "transparent",
                 }}
             >
                 {mediaList.map((media, index) =>
                     media.visible ? (
                         <div
-                            key={media.src || `media-${index}`}
+                            key={media.id}
                             style={{
                                 position: "absolute",
                                 top: `${media.y}%`,
                                 left: `${media.x}%`,
                                 transform: `translate(-50%, -50%) scale(${media.scale}) rotate(${media.rotation}deg)`,
                                 opacity: media.opacity,
-                                mixBlendMode: (media as ExtendedMediaItem).mixBlendMode || "normal",
+                                mixBlendMode: media.mixBlendMode || "normal",
                                 zIndex: zIndexMap['allMedia'] + index,
                                 cursor: "move",
                                 pointerEvents: "auto",
                             }}
                             onMouseDown={(e) => {
-                                if (e.detail === 1) {
+                                if (e.detail === 1 && ["audio", "video", "image"].includes(media.type)) {
                                     onImageMouseDown(e, index);
                                 }
                             }}
                             onDoubleClick={(e) => {
                                 e.stopPropagation();
                                 e.preventDefault();
-                                onSelectElement({ type: "media", index }, e); // Pass the event
+                                if (media.visible) {
+                                    onSelectElement({ type: "media", index }, e);
+                                }
                             }}
                         >
                             {media.type === "image" ? (
@@ -202,7 +235,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                                     autoPlay
                                     loop
                                     muted
-                                    controls={(media as ExtendedMediaItem).showControls || false}
+                                    controls={media.showControls || false}
                                     style={{ width: "100px" }}
                                 />
                             ) : null}
@@ -210,7 +243,6 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                     ) : null
                 )}
             </div>
-            {/* ASCII Layer */}
             {asciiEnabled && (
                 <div
                     style={{
@@ -224,7 +256,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                         filter: `contrast(${asciiGamma}) saturate(${asciiSaturation})`,
                         zIndex: zIndexMap['ascii'],
                         pointerEvents: "none",
-                        background: "transparent", // Ensure no solid background
+                        background: "transparent",
                     }}
                 >
                     {customTexts.map((text, index) => (
@@ -248,7 +280,9 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                             onDoubleClick={(e) => {
                                 e.stopPropagation();
                                 e.preventDefault();
-                                onSelectElement({ type: "customText", index }, e); // Pass the event
+                                if (text.text) {
+                                    onSelectElement({ type: "customText", index }, e);
+                                }
                             }}
                         >
                             <pre style={{ whiteSpace: "pre-wrap" }}>{text.text}</pre>
@@ -259,11 +293,5 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         </div>
     );
 };
-
-interface ExtendedMediaItem extends MediaItem {
-    showControls?: boolean;
-    mixBlendMode?: MixBlendMode;
-    optimizedSrc?: string;
-}
 
 export default Workspace;

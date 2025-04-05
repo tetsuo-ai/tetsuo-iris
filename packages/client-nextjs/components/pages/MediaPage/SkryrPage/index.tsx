@@ -2,29 +2,29 @@
 
 import React, { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import Workspace from "./Workspace";
+import Workspace, { MediaItem, MixBlendMode, MediaItem as WorkspaceMediaItem, MixBlendMode as WorkspaceMixBlendMode } from "./Workspace";
+import { useDrag, MediaItem as DragMediaItem } from "./hooks/useDrag";
+import { ExtendedMediaItem } from "./ui/skryr-toolbar";
+import { KeyMapping, VirtualKeyboard } from "./VirtualKeyboard"; // Add VirtualKeyboard import
 import { useEffects } from "./hooks/useEffects";
 import { WebampMilkdrop, WebampMilkdropProps } from "./WebampMilkdrop";
-import VirtualKeyboard, { KeyMapping, MediaItem, MediaItem as VirtualKeyboardMediaItem } from "./VirtualKeyboard";
+// import VirtualKeyboard, { KeyMapping, MediaItem as VirtualKeyboardMediaItem } from "./VirtualKeyboard";
 import { useFullscreen } from "./hooks/useFullscreen";
 import { useMediaState, CustomTextItem } from "./hooks/useMediaState";
-import { useDrag } from "./hooks/useDrag";
+// import { useDrag, MediaItem as DragMediaItem } from "./hooks/useDrag";
 import AsioAudioProcessor from "./AsioAudioProcess";
 import { Button } from "@/components/ui/button";
 import Slider from "@/components/ui/slider";
 import { FFmpeg } from '@ffmpeg/ffmpeg';
-import type { ExtendedMediaItem } from "@/components/pages/MediaPage/SkryrPage/ui/skryr-toolbar";
+import UnboundMediaList from "@/components/pages/MediaPage/SkryrPage/ui/skryr-unbound-media"; // Add this import at the top
 
 const clamp = (val: number, min: number, max: number) => Math.max(min, Math.min(max, val));
 
 const SkryrToolbar = dynamic(() => import("@/components/pages/MediaPage/SkryrPage/ui/skryr-toolbar"), { ssr: false });
 const SkryrPalette = dynamic(() => import("@/components/pages/MediaPage/SkryrPage/ui/skryr-palette"), { ssr: false });
 
-type SelectedElement = { type: "media" | "customText"; index: number } | null;
+type SelectedElement = { type: "media" | "customText"; index: number; fileName?: string } | null; 
 type SelectedLayer = "milkdrop" | "matrix" | "ascii" | "allMedia" | "background" | null;
-type MixBlendMode = "normal" | "multiply" | "screen" | "overlay" | "darken" | "lighten" |
-    "color-dodge" | "color-burn" | "hard-light" | "soft-light" | "difference" |
-    "exclusion" | "hue" | "saturation" | "color" | "luminosity";
 
 interface SkryrPageProps {
     backgroundEnabled?: boolean;
@@ -33,7 +33,7 @@ interface SkryrPageProps {
 const defaultMediaItems: ExtendedMediaItem[] = [
     {
         type: "image",
-        src: "https://via.placeholder.com/150",
+        src: "https://eaccelerate.me/tetsuo/tetsuo-unit-frame.gif",
         x: 10,
         y: 10,
         scale: 1,
@@ -47,8 +47,8 @@ const defaultMediaItems: ExtendedMediaItem[] = [
         mixBlendMode: "normal",
     },
     {
-        type: "video",
-        src: "https://www.w3schools.com/html/mov_bbb.mp4",
+        type: "image",
+        src: "https://eaccelerate.me/tetsuo/skryrblendingdemo.gif",
         x: 20,
         y: 20,
         scale: 1,
@@ -57,7 +57,23 @@ const defaultMediaItems: ExtendedMediaItem[] = [
         visible: false,
         interruptOnPlay: true,
         isManuallyControlled: true,
-        showAt: 0,
+        showAt: 2,
+        hideAt: Infinity,
+        mixBlendMode: "normal",
+        showControls: true,
+    },
+    {
+        type: "image",
+        src: "https://eaccelerate.me/tetsuo/neuro-gifs.gif",
+        x: 30,
+        y: 30,
+        scale: 1,
+        rotation: 0,
+        opacity: 1,
+        visible: false,
+        interruptOnPlay: true,
+        isManuallyControlled: true,
+        showAt: 3,
         hideAt: Infinity,
         mixBlendMode: "normal",
         showControls: true,
@@ -141,7 +157,7 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
     const recordedChunksRef = useRef<Blob[]>([]);
     const ffmpegRef = useRef<FFmpeg | null>(null);
     const audioRef = useRef<HTMLAudioElement>(null);
-    const asioAudioRef = useRef<HTMLAudioElement>(null);
+    // const asioAudioRef = useRef<HTMLAudioElement>(null);
     const matrixCanvasRef = useRef<HTMLCanvasElement>(null);
     const barCanvasRef = useRef<HTMLCanvasElement>(null);
     const visualizerCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -152,138 +168,272 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
     const { isFullscreen, workspaceDimensions, handleToggleFullscreen } = useFullscreen();
     const { mediaList: baseMediaList, setMediaList: setBaseMediaList, customTexts, setCustomTexts, keyMappings, setKeyMappings } =
         useMediaState(isFullscreen);
+    const [mediaList, setMediaList] = useState<ExtendedMediaItem[]>(defaultMediaItems);
 
-    // Cast mediaList to ExtendedMediaItem[] and ensure setMediaList matches
-    const mediaList = baseMediaList as ExtendedMediaItem[];
-    const setMediaList = setBaseMediaList as React.Dispatch<React.SetStateAction<ExtendedMediaItem[]>>;
-    
-    // Filter for useDrag to match MediaItem
-    const mediaListForDrag: MediaItem[] = mediaList
-        .filter((item) => ["audio", "video", "image"].includes(item.type))
-        .map((item) => ({
+
+    // For useDrag (matches DragMediaItem)
+    const mediaListForDrag: DragMediaItem[] = mediaList
+        .filter(item => ["audio", "video", "image"].includes(item.type))
+        .map(item => ({
             type: item.type as "audio" | "video" | "image",
             src: item.src,
             x: item.x,
             y: item.y,
             scale: item.scale,
             rotation: item.rotation,
+            opacity: item.opacity,
             visible: item.visible,
-            interruptOnPlay: item.interruptOnPlay,
-            isManuallyControlled: item.isManuallyControlled,
             showAt: item.showAt,
             hideAt: item.hideAt,
-            opacity: 1
+            isManuallyControlled: item.isManuallyControlled,
+            interruptOnPlay: item.interruptOnPlay,
         }));
 
     const { onImageMouseDown, onCustomTextMouseDown } = useDrag(
-        mediaListForDrag, // Use filtered list
+        mediaListForDrag,
         customTexts,
-        setMediaList as React.Dispatch<React.SetStateAction<MediaItem[]>>, // Adjust type for useDrag
+        (list) => setMediaList(prev => {
+            const updatedList = prev.map(item => {
+                const match = list.find(dragItem => dragItem.src === item.src);
+                return match ? { ...item, ...match } : item;
+            });
+            return updatedList as ExtendedMediaItem[];
+        }),
         setCustomTexts
     );
+    // Refs for persistent audio elements
+    // const asioAudioRef = useRef<HTMLAudioElement | null>(null);
 
+    // Initialize processor and asioAudio once on mount
     useEffect(() => {
-        let asioAudio: HTMLAudioElement | null = null;
+        processorRef.current = new AsioAudioProcessor();
 
-        if (!useAsioProcessing) {
-            if (processorRef.current) {
-                processorRef.current.dispose();
-                processorRef.current = null;
+        asioAudioRef.current = new Audio();
+        asioAudioRef.current.className = "hidden";
+        document.body.appendChild(asioAudioRef.current);
+
+        return () => {
+            processorRef.current?.dispose();
+            processorRef.current = null;
+            if (asioAudioRef.current && document.body.contains(asioAudioRef.current)) {
+                document.body.removeChild(asioAudioRef.current);
             }
+            asioAudioRef.current = null;
+        };
+    }, []);
+
+    // Connect media elements and lock volume
+    useEffect(() => {
+        if (!useAsioProcessing) {
             if (audioRef.current) {
                 audioRef.current.muted = false;
                 audioRef.current.volume = volume;
+                console.log("Non-ASIO volume set to:", volume);
             }
-            document.querySelectorAll("audio").forEach((el) => {
-                const mediaEl = el as HTMLMediaElement;
-                if (mediaEl !== audioRef.current) {
-                    mediaEl.muted = false;
-                }
-            });
             setAudioReady(true);
             return;
         }
 
-        if (!processorRef.current) {
-            processorRef.current = new AsioAudioProcessor();
+        if (!processorRef.current || !asioAudioRef.current) return;
+
+        if (!processorRef.current.isMediaElementConnected(asioAudioRef.current)) {
+            processorRef.current.connectMediaElement(asioAudioRef.current);
+            asioAudioRef.current.muted = false;
         }
 
-        asioAudio = new Audio();
-        asioAudio.className = "hidden";
-        document.body.appendChild(asioAudio);
-
-        if (!processorRef.current.isMediaElementConnected(asioAudio)) {
-            processorRef.current.connectMediaElement(asioAudio);
-            asioAudio.muted = false;
-            processorRef.current.setVolume(volume);
-            if (audioRef.current && audioRef.current.src) {
-                asioAudio.src = audioRef.current.src;
-                if (isPlaying) {
-                    asioAudio.play().catch((err) => console.error("ASIO play error:", err));
-                }
-            }
-        } else {
-            processorRef.current.setVolume(volume);
-        }
-
-        if (backgroundVideoRef.current && !processorRef.current.isMediaElementConnected(backgroundVideoRef.current)) {
-            processorRef.current.connectMediaElement(backgroundVideoRef.current);
-        }
-        mediaList.forEach((item, index) => {
-            const videoElement = document.querySelector(`#media-video-${index}`) as HTMLMediaElement;
-            if (videoElement && !processorRef.current!.isMediaElementConnected(videoElement)) {
-                processorRef.current!.connectMediaElement(videoElement);
-            }
-        });
-
-        document.querySelectorAll("#webamp-container audio").forEach((el) => {
-            const mediaEl = el as HTMLMediaElement;
-            if (mediaEl !== audioRef.current && mediaEl !== asioAudio) {
-                mediaEl.muted = true;
-                mediaEl.pause();
-            }
-        });
+        processorRef.current.setVolume(volume);
+        asioAudioRef.current.volume = volume;
+        console.log("ASIO volume set to:", volume);
 
         setAudioReady(true);
+    }, [useAsioProcessing, volume]);
 
-        return () => {
-            if (processorRef.current) {
-                processorRef.current.dispose();
-                processorRef.current = null;
-            }
-            if (audioRef.current) {
-                audioRef.current.muted = false;
-            }
-            if (asioAudio) {
-                document.body.removeChild(asioAudio);
-                asioAudio = null;
+    // Sync audio source and handle playback
+    useEffect(() => {
+        if (!useAsioProcessing || !processorRef.current || !audioRef.current || !asioAudioRef.current) return;
+
+        const syncAudio = () => {
+            if (audioRef.current && asioAudioRef.current && audioRef.current.src !== asioAudioRef.current.src) {
+                asioAudioRef.current.src = audioRef.current.src;
+                if (isPlaying) asioAudioRef.current.play().catch(err => console.error("ASIO sync play error:", err));
             }
         };
-    }, [useAsioProcessing, mediaList, volume, isPlaying]);
+
+        processorRef.current.resume();
+        if (isPlaying) {
+            audioRef.current.play().catch(err => console.error("Audio play error:", err));
+            if (audioRef.current.src && asioAudioRef.current) {
+                asioAudioRef.current.play().catch(err => console.error("ASIO play error:", err));
+            }
+        } else {
+            audioRef.current.pause();
+            asioAudioRef.current.pause();
+        }
+
+        processorRef.current.setVolume(volume);
+        asioAudioRef.current.volume = volume;
+        audioRef.current.volume = volume;
+        console.log("Volume reapplied during playback sync:", volume);
+
+        audioRef.current.addEventListener("play", syncAudio);
+        audioRef.current.addEventListener("pause", () => asioAudioRef.current?.pause());
+        audioRef.current.addEventListener("ended", () => asioAudioRef.current?.pause());
+
+        return () => {
+            audioRef.current?.removeEventListener("play", syncAudio);
+            audioRef.current?.removeEventListener("pause", () => asioAudioRef.current?.pause());
+            audioRef.current?.removeEventListener("ended", () => asioAudioRef.current?.pause());
+        };
+    }, [useAsioProcessing, isPlaying, volume]);
+
+
+
+    const [isClearingAll, setIsClearingAll] = useState(false);
+
 
     const handleClearAllMedia = useCallback(() => {
-        setMediaList([]);
+        console.log("handleClearAllMedia called");
+        setMediaList(() => []);
+        setKeyMappings(() => []);
         setSelectedElement(null);
         setActiveMediaIndex(null);
-    }, [setMediaList]);
+        setIsClearingAll(true);
+        localStorage.removeItem("skryrMediaList");
+        localStorage.removeItem("skryrKeyMappings");
+    }, [setMediaList, setKeyMappings]);
 
+
+    useEffect(() => {
+        const savedMedia = localStorage.getItem("skryrMediaList");
+        const savedMappings = localStorage.getItem("skryrKeyMappings");
+        const savedPanels = localStorage.getItem("skryrPanels");
+
+        if (isClearingAll) {
+            console.log("Skipping localStorage load due to clear");
+            setIsClearingAll(false);
+            return;
+        }
+
+        if (savedMedia) {
+            const parsedMedia: ExtendedMediaItem[] = JSON.parse(savedMedia);
+            console.log("Loading media from localStorage:", parsedMedia);
+            setMediaList(parsedMedia.length > 0 ? parsedMedia : defaultMediaItems);
+        } else {
+            setMediaList(defaultMediaItems);
+        }
+
+        if (savedMappings) {
+            const parsedMappings: KeyMapping[] = JSON.parse(savedMappings);
+            console.log("Loading keyMappings from localStorage:", parsedMappings);
+            setKeyMappings(parsedMappings);
+        }
+
+        if (savedPanels) {
+            const { giphy, keyboard, media, unbound, layer } = JSON.parse(savedPanels);
+            setShowGiphyKeyboard(giphy);
+            setShowVirtualKeyboard(keyboard);
+            setShowMediaPanel(media);
+            setShowUnboundMediaList(unbound);
+            setShowLayerPanel(layer);
+        }
+    }, [setMediaList, setKeyMappings, isClearingAll, defaultMediaItems]);
+
+    useEffect(() => {
+        localStorage.setItem("skryrMediaList", JSON.stringify(mediaList));
+        localStorage.setItem("skryrKeyMappings", JSON.stringify(keyMappings));
+        localStorage.setItem("skryrPanels", JSON.stringify({
+            giphy: showGiphyKeyboard,
+            keyboard: showVirtualKeyboard,
+            media: showMediaPanel,
+            unbound: showUnboundMediaList,
+            layer: showLayerPanel,
+        }));
+    }, [mediaList, keyMappings, showGiphyKeyboard, showVirtualKeyboard, showMediaPanel, showUnboundMediaList, showLayerPanel]);
+    const checkMediaValidity = useCallback((item: ExtendedMediaItem, index: number) => {
+        if (item.src.startsWith("blob:")) {
+            console.log(`Skipping validity check for blob URL: ${item.src}`);
+            return;
+        }
+        fetch(item.src, { method: "HEAD", mode: "no-cors" })
+            .then(response => {
+                if (!response.ok) {
+                    setMedia404List(prev => [...new Set([...prev, item.src])]);
+                    setMediaList(prev => {
+                        const newList = prev.filter((_, i) => i !== index);
+                        setKeyMappings(prevMappings => {
+                            const newMappings = prevMappings.map(mapping => {
+                                if (mapping.assignedIndex === index) {
+                                    return { ...mapping, assignedIndex: null };
+                                }
+                                if (mapping.assignedIndex !== null && mapping.assignedIndex > index) {
+                                    return { ...mapping, assignedIndex: mapping.assignedIndex - 1 };
+                                }
+                                return mapping;
+                            });
+                            return newMappings;
+                        });
+                        return newList;
+                    });
+                }
+            })
+            .catch(() => {
+                setMedia404List(prev => [...new Set([...prev, item.src])]);
+                setMediaList(prev => {
+                    const newList = prev.filter((_, i) => i !== index);
+                    setKeyMappings(prevMappings => {
+                        const newMappings = prevMappings.map(mapping => {
+                            if (mapping.assignedIndex === index) {
+                                return { ...mapping, assignedIndex: null };
+                            }
+                            if (mapping.assignedIndex !== null && mapping.assignedIndex > index) {
+                                return { ...mapping, assignedIndex: mapping.assignedIndex - 1 };
+                            }
+                            return mapping;
+                        });
+                        return newMappings;
+                    });
+                    return newList;
+                });
+            });
+    }, [setMediaList, setKeyMappings, setMedia404List]);
+
+    // Clear 404 media
     const handleClear404Media = useCallback(() => {
-        setMediaList(prev => prev.filter(item => !media404List.includes(item.src)));
+        console.log("Clearing 404 media");
+        setMediaList(prev => {
+            const newList = prev.filter(item => !media404List.includes(item.src));
+            console.log("Media list after clearing 404s:", newList);
+            setKeyMappings(prevMappings => {
+                const newMappings = prevMappings.map(mapping => {
+                    if (mapping.assignedIndex !== null &&
+                        !newList.some(item => item.src === (mapping.assignedIndex !== null ? mediaList[mapping.assignedIndex]?.src : undefined))) {
+                        return { ...mapping, assignedIndex: null };
+                    }
+                    return mapping;
+                });
+                console.log("Key mappings after clearing 404s:", newMappings);
+                localStorage.setItem("skryrKeyMappings", JSON.stringify(newMappings));
+                return newMappings;
+            });
+            localStorage.setItem("skryrMediaList", JSON.stringify(newList));
+            return newList;
+        });
         setMedia404List([]);
-    }, [setMediaList, media404List]);
+    }, [mediaList, media404List, setMediaList, setKeyMappings]);
 
+    // Toggle recording with system audio at 320 kbps and ultra-fast volume lock
     const toggleRecording = useCallback(async () => {
         if (!isRecording && !isStreaming) {
             try {
                 const stream = await navigator.mediaDevices.getDisplayMedia({
                     video: { displaySurface: "monitor" },
-                    audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 44100 },
+                    audio: { echoCancellation: false, noiseSuppression: false, sampleRate: 44100 }, // Prompt for system audio
                 });
 
                 const recorder = new MediaRecorder(stream, {
                     mimeType: "video/webm;codecs=vp8,opus",
-                    videoBitsPerSecond: 2500000,
-                    audioBitsPerSecond: 128000,
+                    videoBitsPerSecond: 2500000, // 2.5 Mbps for video
+                    audioBitsPerSecond: 320000,  // 320 kbps for audio
                 });
                 setMediaRecorder(recorder);
                 recordedChunksRef.current = [];
@@ -310,11 +460,11 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
                                 "-c:v", "libx264",
                                 "-c:a", "aac",
                                 "-b:v", "2500k",
-                                "-b:a", "128k",
+                                "-b:a", "320k",
                                 "-preset", "fast",
                                 "output.mp4",
                             ]);
-                            const mp4Data = (await ffmpegRef.current.readFile("output.mp4")) as Uint8Array;
+                            const mp4Data = await ffmpegRef.current.readFile("output.mp4") as Uint8Array;
                             const mp4Blob = new Blob([mp4Data], { type: "video/mp4" });
                             const url = URL.createObjectURL(mp4Blob);
                             setPrepStatus("done");
@@ -341,10 +491,59 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
                     stream.getTracks().forEach(track => track.stop());
                     setMediaRecorder(null);
                     recordedChunksRef.current = [];
+
+                    // Restore volume after recording stops
+                    if (useAsioProcessing && processorRef.current) {
+                        processorRef.current.setVolume(volume);
+                        if (asioAudioRef.current) asioAudioRef.current.volume = volume;
+                        console.log("Volume restored post-recording (ASIO):", volume);
+                    } else if (audioRef.current) {
+                        audioRef.current.volume = volume;
+                        console.log("Volume restored post-recording (non-ASIO):", volume);
+                    }
+
                     setTimeout(() => {
                         setIsPreparingFile(false);
                         setPrepStatus(null);
                     }, 2000);
+                };
+
+                recorder.onstart = () => {
+                    // Lock volume at recording start
+                    if (useAsioProcessing && processorRef.current) {
+                        processorRef.current.setVolume(volume);
+                        if (asioAudioRef.current) asioAudioRef.current.volume = volume;
+                    } else if (audioRef.current) {
+                        audioRef.current.volume = volume;
+                    }
+                    console.log("Recording started, volume locked at:", volume);
+
+                    // Continuous volume lock during recording with requestAnimationFrame
+                    let lastVolumeCheck = performance.now();
+                    const lockVolume = () => {
+                        const now = performance.now();
+                        if (now - lastVolumeCheck >= 100) { // Check every 100ms
+                            lastVolumeCheck = now;
+                            if (useAsioProcessing && processorRef.current) {
+                                const currentGain = processorRef.current.getGainValue();
+                                if (currentGain !== volume) {
+                                    console.warn("Volume drift detected during recording (ASIO), correcting from", currentGain, "to", volume);
+                                    processorRef.current.setVolume(volume);
+                                }
+                                if (asioAudioRef.current && asioAudioRef.current.volume !== volume) {
+                                    console.warn("Volume drift detected during recording (asioAudio), correcting from", asioAudioRef.current.volume, "to", volume);
+                                    asioAudioRef.current.volume = volume;
+                                }
+                            } else if (audioRef.current && audioRef.current.volume !== volume) {
+                                console.warn("Volume drift detected during recording (audioRef), correcting from", audioRef.current.volume, "to", volume);
+                                audioRef.current.volume = volume;
+                            }
+                        }
+                        if (recorder.state !== "inactive") {
+                            requestAnimationFrame(lockVolume);
+                        }
+                    };
+                    requestAnimationFrame(lockVolume);
                 };
 
                 recorder.start(500);
@@ -357,7 +556,7 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
             mediaRecorder.stop();
             setIsRecording(false);
         }
-    }, [isRecording, mediaRecorder, isStreaming]);
+    }, [isRecording, isStreaming, mediaRecorder, useAsioProcessing, volume]);
 
     const renderAudioControls = useCallback(() => (
         <div className={`flex flex-col gap-6 p-6 bg-gray-800 rounded-lg shadow-lg border border-gray-700 animate-panel`}>
@@ -560,53 +759,6 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
     }, []);
 
     useEffect(() => {
-        const savedMedia = localStorage.getItem("skryrMediaList");
-        const savedMappings = localStorage.getItem("skryrKeyMappings");
-        const savedPanels = localStorage.getItem("skryrPanels");
-
-        if (savedMedia) {
-            const parsedMedia: ExtendedMediaItem[] = JSON.parse(savedMedia);
-            setMediaList(parsedMedia.length > 0 ? parsedMedia : defaultMediaItems);
-        } else {
-            setMediaList(defaultMediaItems);
-        }
-
-        if (savedMappings) setKeyMappings(JSON.parse(savedMappings));
-        if (savedPanels) {
-            const { giphy, keyboard, media, unbound, layer } = JSON.parse(savedPanels);
-            setShowGiphyKeyboard(giphy);
-            setShowVirtualKeyboard(keyboard);
-            setShowMediaPanel(media);
-            setShowUnboundMediaList(unbound);
-            setShowLayerPanel(layer);
-        }
-    }, [setMediaList, setKeyMappings]);
-
-    useEffect(() => {
-        localStorage.setItem("skryrMediaList", JSON.stringify(mediaList));
-        localStorage.setItem("skryrKeyMappings", JSON.stringify(keyMappings));
-        localStorage.setItem("skryrPanels", JSON.stringify({
-            giphy: showGiphyKeyboard,
-            keyboard: showVirtualKeyboard,
-            media: showMediaPanel,
-            unbound: showUnboundMediaList,
-            layer: showLayerPanel,
-        }));
-    }, [mediaList, keyMappings, showGiphyKeyboard, showVirtualKeyboard, showMediaPanel, showUnboundMediaList, showLayerPanel]);
-
-    useEffect(() => {
-        mediaList.forEach(item => {
-            fetch(item.src, { method: "HEAD" })
-                .then(response => {
-                    if (!response.ok) {
-                        setMedia404List(prev => [...new Set([...prev, item.src])]);
-                    }
-                })
-                .catch(() => setMedia404List(prev => [...new Set([...prev, item.src])]));
-        });
-    }, [mediaList]);
-
-    useEffect(() => {
         const canvas = backgroundCanvasRef.current;
         if (!canvas) return;
         const ctx = canvas.getContext("2d");
@@ -669,80 +821,113 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
         }
     }, [isStarted]);
 
-    useEffect(() => {
-        let asioAudio: HTMLAudioElement | null = null;
+    // Use a ref to persist asioAudio across renders
+    const asioAudioRef = useRef<HTMLAudioElement | null>(null);
 
-        if (!useAsioProcessing) {
-            if (processorRef.current) {
-                processorRef.current.dispose();
-                processorRef.current = null;
+    // Initialize processor and asioAudio once on mount
+    useEffect(() => {
+        processorRef.current = new AsioAudioProcessor();
+
+        // Create asioAudio only once
+        asioAudioRef.current = new Audio();
+        asioAudioRef.current.className = "hidden";
+        document.body.appendChild(asioAudioRef.current);
+
+        return () => {
+            processorRef.current?.dispose();
+            processorRef.current = null;
+            if (asioAudioRef.current && document.body.contains(asioAudioRef.current)) {
+                document.body.removeChild(asioAudioRef.current);
             }
+            asioAudioRef.current = null;
+        };
+    }, []);
+
+    // Connect media elements when useAsioProcessing or mediaList changes
+    useEffect(() => {
+        if (!useAsioProcessing) {
             if (audioRef.current) {
                 audioRef.current.muted = false;
                 audioRef.current.volume = volume;
             }
             document.querySelectorAll("audio").forEach((el) => {
                 const mediaEl = el as HTMLMediaElement;
-                if (mediaEl !== audioRef.current) {
-                    mediaEl.muted = false;
-                }
+                if (mediaEl !== audioRef.current) mediaEl.muted = false;
             });
             setAudioReady(true);
             return;
         }
 
-        if (!processorRef.current) {
-            processorRef.current = new AsioAudioProcessor();
+        if (!processorRef.current || !asioAudioRef.current) return;
+
+        // Connect asioAudio only if not already connected
+        if (!processorRef.current.isMediaElementConnected(asioAudioRef.current)) {
+            processorRef.current.connectMediaElement(asioAudioRef.current);
+            asioAudioRef.current.muted = false;
         }
 
-        asioAudio = new Audio();
-        asioAudio.className = "hidden";
-        document.body.appendChild(asioAudio);
+        // Connect background video only if not already connected
+        if (backgroundVideoRef.current && !processorRef.current.isMediaElementConnected(backgroundVideoRef.current)) {
+            processorRef.current.connectMediaElement(backgroundVideoRef.current);
+        }
 
-        if (!processorRef.current.isMediaElementConnected(asioAudio)) {
-            processorRef.current.connectMediaElement(asioAudio);
-            asioAudio.muted = false;
-            processorRef.current.setVolume(volume);
-            if (audioRef.current && audioRef.current.src) {
-                asioAudio.src = audioRef.current.src;
-                if (isPlaying) asioAudio.play().catch((err) => console.error("ASIO play error:", err));
+        // Connect mediaList videos only if not already connected
+        mediaList.forEach((item, index) => {
+            const videoElement = document.querySelector(`#media-video-${index}`) as HTMLMediaElement;
+            if (videoElement && !processorRef.current!.isMediaElementConnected(videoElement)) {
+                processorRef.current!.connectMediaElement(videoElement);
             }
-        }
+        });
 
-        // Sync asioAudio with audioRef.current changes
+        setAudioReady(true);
+
+        // No cleanup needed here since asioAudio is handled in the mount effect
+    }, [useAsioProcessing, mediaList]);
+
+    // Sync audio source and handle playback
+    useEffect(() => {
+        if (!useAsioProcessing || !processorRef.current || !audioRef.current || !asioAudioRef.current) return;
+
         const syncAudio = () => {
-            if (audioRef.current && asioAudio && audioRef.current.src !== asioAudio.src) {
-                asioAudio.src = audioRef.current.src;
-                if (isPlaying) asioAudio.play().catch((err) => console.error("ASIO sync play error:", err));
+            if (audioRef.current && asioAudioRef.current && audioRef.current.src !== asioAudioRef.current.src) {
+                asioAudioRef.current.src = audioRef.current.src;
+                if (isPlaying) asioAudioRef.current.play().catch(err => console.error("ASIO sync play error:", err));
             }
         };
-        if (audioRef.current) {
-            audioRef.current.addEventListener("play", syncAudio);
-            audioRef.current.addEventListener("pause", () => asioAudio?.pause());
-            audioRef.current.addEventListener("ended", () => asioAudio?.pause());
+
+        processorRef.current.resume();
+        if (isPlaying) {
+            audioRef.current.play().catch(err => console.error("Audio play error:", err));
+            if (audioRef.current.src && asioAudioRef.current) {
+                asioAudioRef.current.play().catch(err => console.error("ASIO play error:", err));
+            }
+        } else {
+            audioRef.current.pause();
+            asioAudioRef.current.pause();
         }
 
-        // Don’t connect audioRef.current directly to avoid conflicts
-        // if (audioRef.current && !processorRef.current.isMediaElementConnected(audioRef.current) && audioRef.current !== webampAudioElement) {
-        //     processorRef.current.connectMediaElement(audioRef.current);
-        // }
+        audioRef.current.addEventListener("play", syncAudio);
+        audioRef.current.addEventListener("pause", () => asioAudioRef.current?.pause());
+        audioRef.current.addEventListener("ended", () => asioAudioRef.current?.pause());
 
         return () => {
-            if (processorRef.current) {
-                processorRef.current.dispose();
-                processorRef.current = null;
-            }
-            if (audioRef.current) {
-                audioRef.current.muted = false;
-                audioRef.current.removeEventListener("play", syncAudio);
-                audioRef.current.removeEventListener("pause", () => asioAudio?.pause());
-                audioRef.current.removeEventListener("ended", () => asioAudio?.pause());
-            }
-            if (asioAudio && document.body.contains(asioAudio)) {
-                document.body.removeChild(asioAudio);
-            }
+            audioRef.current?.removeEventListener("play", syncAudio);
+            audioRef.current?.removeEventListener("pause", () => asioAudioRef.current?.pause());
+            audioRef.current?.removeEventListener("ended", () => asioAudioRef.current?.pause());
         };
-    }, [useAsioProcessing, mediaList, volume, isPlaying, webampAudioElement]);
+    }, [useAsioProcessing, isPlaying]);
+
+
+    // Update volume separately
+    useEffect(() => {
+        if (!processorRef.current) return;
+
+        if (useAsioProcessing) {
+            processorRef.current.setVolume(volume);
+        } else if (audioRef.current) {
+            audioRef.current.volume = volume;
+        }
+    }, [useAsioProcessing, volume]);
 
     useEffect(() => {
         let rafId: number;
@@ -762,13 +947,35 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
         return () => cancelAnimationFrame(rafId);
     }, []);
 
-    const handleBackgroundMediaDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    const handleBackgroundMediaDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
-        const url = e.dataTransfer.getData("text/uri-list") || e.dataTransfer.getData("text");
-        if (url && /\.(mp4|webm|gif)$/.test(url)) {
-            setBackgroundMedia(url);
+        if (!(e.target as HTMLElement).closest(".virtual-keyboard")) {
+            const url = e.dataTransfer.getData("text/uri-list") || e.dataTransfer.getData("text");
+            if (url && /\.(mp4|webm|gif|jpg|jpeg|png)$/.test(url)) {
+                setMediaList((prev: ExtendedMediaItem[]) => {
+                    const newItem = {
+                        type: url.match(/\.(mp4|webm)$/) ? "video" : "image",
+                        src: url,
+                        x: 0, // Top-left
+                        y: 0, // Top-left
+                        scale: 1,
+                        rotation: 0,
+                        opacity: 1,
+                        visible: true,
+                        interruptOnPlay: false,
+                        isManuallyControlled: true,
+                        showAt: 0,
+                        hideAt: Infinity,
+                        mixBlendMode: "normal" as MixBlendMode,
+                        showControls: url.match(/\.(mp4|webm)$/) ? true : false,
+                    } as ExtendedMediaItem;
+                    const newList = [...prev, newItem];
+                    checkMediaValidity(newItem, newList.length - 1);
+                    return newList;
+                });
+            }
         }
-    };
+    }, [setMediaList, checkMediaValidity]);
 
     const optimizeAndValidateMedia = async (src: string): Promise<string | null> => {
         const img = new Image();
@@ -818,16 +1025,21 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
     const [lastInteractionWasDoubleClick, setLastInteractionWasDoubleClick] = useState(false);
 
     const onSelectElement = useCallback((elem: SelectedElement, event?: React.MouseEvent) => {
-        setSelectedElement(elem);
+        if (elem && elem.type === "media" && !mediaList[elem.index]?.visible) return;
+        setSelectedElement(elem ? {
+            type: elem.type,
+            index: elem.index,
+            fileName: elem.type === "media" && mediaList[elem.index] ? mediaList[elem.index].src.split("/").pop() : undefined,
+        } : null);
         setSelectedLayer(null);
         if (event && event.detail === 2) {
-            setShowLayerPanel(false); // Close Layers & Effects
+            setShowLayerPanel(false);
             setShowPalette(true);
             setLastInteractionWasDoubleClick(true);
         } else {
             setLastInteractionWasDoubleClick(false);
         }
-    }, []);
+    }, [mediaList, setShowLayerPanel, setShowPalette]);
 
     const onSelectLayer = useCallback((layer: SelectedLayer) => {
         setSelectedLayer(layer);
@@ -852,7 +1064,7 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
             return newState;
         });
     }, []);
-
+    
     const handleStop = useCallback(() => {
         setIsPlaying(false);
         if (audioRef.current) {
@@ -883,13 +1095,12 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
             const scaleToCover = Math.max(workspaceDimensions.width / 256, workspaceDimensions.height / 256);
             const optimizedSrc = await optimizeAndValidateMedia(gifUrl);
             if (optimizedSrc) {
-                setMediaList((prev: ExtendedMediaItem[]) => [
-                    ...prev,
-                    {
+                setMediaList((prev: ExtendedMediaItem[]) => {
+                    const newItem = {
                         type: "image",
                         src: optimizedSrc,
-                        x: 0,
-                        y: 0,
+                        x: 0, // Top-left
+                        y: 0, // Top-left
                         scale: scaleToCover,
                         rotation: 0,
                         opacity: 1,
@@ -898,13 +1109,17 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
                         isManuallyControlled: true,
                         showAt: 0,
                         hideAt: Infinity,
-                        mixBlendMode: "normal",
-                    } as ExtendedMediaItem,
-                ]);
+                        mixBlendMode: "normal" as MixBlendMode,
+                        showControls: false,
+                    } as ExtendedMediaItem;
+                    const newList = [...prev, newItem];
+                    checkMediaValidity(newItem, newList.length - 1);
+                    return newList;
+                });
                 setShowGiphyKeyboard(false);
             }
         },
-        [setMediaList, workspaceDimensions]
+        [setMediaList, workspaceDimensions, checkMediaValidity]
     );
 
     const onToggleMedia = useCallback(
@@ -1000,67 +1215,119 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
             setIsStreaming(false);
         }
     }, [isStreaming, mediaRecorder, streamBitrate, streamResolution, streamServerUrl, streamKey, isFFmpegLoaded]);
-
     useEffect(() => {
+        const keyMap = new Map<string, KeyMapping>(
+            keyMappings
+                .filter((m): m is KeyMapping => m != null && m.key !== undefined) // Exclude null and undefined
+                .map(m => [m.key.toUpperCase(), m] as const)
+        );
+
         const onKeyDown = (e: KeyboardEvent) => {
-            switch (e.key.toLowerCase()) {
-                case "enter": togglePlayPause(); break;
-                case "tab":
+            const keyUpper = e.key.toUpperCase();
+            switch (keyUpper) {
+                case "ENTER": togglePlayPause(); break;
+                case "TAB":
                     e.preventDefault();
                     setShowPalette(p => !p);
                     break;
-                case "f1": console.log("Help: Press F1 again to hide this log."); break;
-                case "f2": setShowVirtualKeyboard(p => !p); break;
-                case "f3": setShowMediaPanel(p => !p); break;
-                case "f4": setShowUnboundMediaList(p => !p); break;
-                case "f7": setShowLayerPanel(p => !p); break;
-                case "f9": handleStop(); break;
-                case "f10": handleStop(); togglePlayPause(); break;
-                case "f11": handleToggleFullscreen(); break;
-                case "pageup": setZoomLevel(p => clamp(p + 0.1, 0.5, 3)); break;
-                case "pagedown": setZoomLevel(p => clamp(p - 0.1, 0.5, 3)); break;
+                case "F1": console.log("Help: Press F1 again to hide this log."); break;
+                case "F2": setShowVirtualKeyboard(p => !p); break;
+                case "F3": setShowMediaPanel(p => !p); break;
+                case "F4": setShowUnboundMediaList(p => !p); break;
+                case "F7": setShowLayerPanel(p => !p); break;
+                case "F9": handleStop(); break;
+                case "F10": handleStop(); togglePlayPause(); break;
+                case "F11": handleToggleFullscreen(); break;
+                case "PAGEUP": setZoomLevel(p => clamp(p + 0.1, 0.5, 3)); break;
+                case "PAGEDOWN": setZoomLevel(p => clamp(p - 0.1, 0.5, 3)); break;
                 default:
-                    const mapping = keyMappings.find(m => m.key.toUpperCase() === e.key.toUpperCase());
+                    const mapping = keyMap.get(keyUpper);
                     if (mapping && mapping.assignedIndex !== null) {
-                        const mediaIndex = mapping.assignedIndex;
-                        setMediaList(prev =>
-                            prev.map((item, i) => {
-                                if (i === mediaIndex) {
-                                    const shouldBeVisible = !item.visible;
+                        const mediaIndex = mapping.assignedIndex!; // Non-null assertion
+                        setMediaList(prev => {
+                            const newList = [...prev];
+                            const media = newList[mediaIndex];
+                            const shouldBeVisible = !media.visible;
+                            const mediaElement = document.querySelector(`#media-${media.type}-${mediaIndex}`) as HTMLMediaElement;
+
+                            switch (mapping.mode) {
+                                case "toggle":
+                                    newList[mediaIndex] = { ...media, visible: shouldBeVisible };
+                                    if (mediaElement) {
+                                        mediaElement.loop = true;
+                                        if (!mediaElement.paused) mediaElement.play().catch(console.error);
+                                    }
+                                    break;
+                                case "launchpad":
+                                    newList.forEach((item, i) => {
+                                        if (i !== mediaIndex && item.visible) {
+                                            newList[i] = { ...item, visible: false };
+                                            const otherElement = document.querySelector(`#media-${item.type}-${i}`) as HTMLMediaElement;
+                                            if (otherElement) otherElement.pause();
+                                        }
+                                    });
+                                    newList[mediaIndex] = { ...media, visible: shouldBeVisible };
+                                    if (mediaElement) {
+                                        mediaElement.loop = true;
+                                        if (shouldBeVisible) mediaElement.play().catch(console.error);
+                                        else if (!mediaElement.paused) mediaElement.play().catch(console.error);
+                                    }
                                     setActiveMediaIndex(shouldBeVisible ? mediaIndex : null);
-                                    return { ...item, visible: shouldBeVisible, isManuallyControlled: true };
-                                }
-                                return item.interruptOnPlay && activeMediaIndex !== i && activeMediaIndex !== null
-                                    ? { ...item, visible: false }
-                                    : item;
-                            })
-                        );
+                                    break;
+                                case "oneshot":
+                                    if (shouldBeVisible) {
+                                        newList[mediaIndex] = { ...media, visible: true };
+                                        if (mediaElement) {
+                                            mediaElement.loop = false;
+                                            mediaElement.currentTime = 0;
+                                            mediaElement.play().catch(console.error);
+                                            mediaElement.addEventListener("ended", () => {
+                                                setMediaList(p => {
+                                                    const updated = [...p];
+                                                    updated[mediaIndex] = { ...updated[mediaIndex], visible: false };
+                                                    return updated;
+                                                });
+                                            }, { once: true });
+                                        }
+                                    }
+                                    break;
+                                case "playPause":
+                                    newList[mediaIndex] = { ...media, visible: shouldBeVisible };
+                                    if (mediaElement) {
+                                        mediaElement.loop = shouldBeVisible;
+                                        if (shouldBeVisible) mediaElement.play().catch(console.error);
+                                        else mediaElement.pause();
+                                    }
+                                    break;
+                            }
+                            return newList;
+                        });
                     }
             }
         };
+
         window.addEventListener("keydown", onKeyDown);
         return () => window.removeEventListener("keydown", onKeyDown);
     }, [keyMappings, mediaList, setMediaList, handleToggleFullscreen, togglePlayPause, handleStop, activeMediaIndex]);
-
-
-    const { computedColor: effectsColor } = useEffects({
+    
+    const { computedColor: effectsColor, analyserRef } = useEffects({
         matrixEnabled,
         visualizerEnabled: visualizerEnabled && !showWinamp,
         matrixCanvasRef,
         visualizerCanvasRef,
         barCanvasRef,
-        audioContext: processorRef.current ? processorRef.current.getAudioContext() : null,
+        audioContext: processorRef.current?.getAudioContext() || null,
         audioData,
         isFullscreen,
         isPlaying,
         computedColor,
     });
 
-    // Adjust mediaListForComponents to match VirtualKeyboard's MediaItem (with opacity)
-    const mediaListForComponents: VirtualKeyboardMediaItem[] = mediaList
+    // Add useMemo to stabilize mediaListForComponents if still used
+    const mediaListForComponents = React.useMemo(() => mediaList
         .filter((item) => ["audio", "video", "image"].includes(item.type))
         .map((item) => ({
-            type: item.type as "audio" | "video" | "image",
+            type: item.type,
             src: item.src,
             x: item.x,
             y: item.y,
@@ -1071,24 +1338,66 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
             isManuallyControlled: item.isManuallyControlled,
             showAt: item.showAt,
             hideAt: item.hideAt,
-            opacity: item.opacity, // Include required opacity
-        }));
+            opacity: item.opacity,
+            mixBlendMode: item.mixBlendMode,
+            showControls: item.showControls,
+        })), [mediaList]);
+        
+    const handleMediaDrop = useCallback((newMedia: MediaItem, keyIndex: number) => {
+        setMediaList((prev: ExtendedMediaItem[]) => {
+            // Convert MediaItem to ExtendedMediaItem with default values for required fields
+            const extendedNewMedia: ExtendedMediaItem = {
+                ...newMedia,
+                interruptOnPlay: newMedia.interruptOnPlay ?? false, // Default to false if undefined
+                isManuallyControlled: newMedia.isManuallyControlled ?? true, // Default to true if undefined
+                showAt: newMedia.showAt ?? 0, // Default to 0 if undefined
+                hideAt: newMedia.hideAt ?? Infinity, // Default to Infinity if undefined
+                opacity: newMedia.opacity ?? 1, // Default to 1 if undefined
+                scale: newMedia.scale ?? 1, // Default to 1 if undefined
+                rotation: newMedia.rotation ?? 0, // Default to 0 if undefined
+                visible: newMedia.visible ?? true, // Default to true if undefined
+                mixBlendMode: newMedia.mixBlendMode ?? "normal", // Default to "normal" if undefined
+                // Add any other required ExtendedMediaItem fields not present in MediaItem
+                showControls: newMedia.type === "video" ? true : false, // Example default based on type
+            };
 
-    const renderVirtualKeyboardPanel = useCallback(
+            const newList = [...prev, extendedNewMedia];
+            const newIndex = newList.length - 1;
+
+            setKeyMappings((prevMappings) => {
+                const newMappings = [...prevMappings];
+                newMappings[keyIndex] = {
+                    ...newMappings[keyIndex],
+                    assignedIndex: newIndex,
+                    mappingType: newMedia.type === "audio" ? "audio" : "media",
+                    mode: "toggle",
+                };
+                console.log(`Assigned ${newMedia.src} to key ${keyIndex} with index ${newIndex}`);
+                return newMappings;
+            });
+
+            return newList;
+        });
+    }, [setMediaList, setKeyMappings]);
+
+
+
+    // Update renderVirtualKeyboardPanel with memoization
+    const renderVirtualKeyboardPanel = React.useCallback(
         () => (
             <VirtualKeyboard
                 keyMappings={keyMappings}
-                mediaList={mediaListForComponents}
+                mediaList={mediaList}
                 setKeyMappings={setKeyMappings}
-                setMediaList={(list: VirtualKeyboardMediaItem[]) => setMediaList(list as ExtendedMediaItem[])} // Adjust type
+                setMediaList={setMediaList}
                 computedColor={computedColor}
                 onSelectElement={onSelectElement}
+                checkMediaValidity={checkMediaValidity}
             />
         ),
-        [keyMappings, mediaListForComponents, setKeyMappings, setMediaList, computedColor, onSelectElement]
+        [keyMappings, mediaList, setKeyMappings, setMediaList, computedColor, onSelectElement, checkMediaValidity]
     );
 
-    // In SkryrPage.tsx
     const renderOptionsContent = useCallback(() => {
         if (!selectedElement || selectedElement.index >= mediaList.length) return null;
         const media = mediaList[selectedElement.index];
@@ -1101,50 +1410,80 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
             });
         };
 
-        const scaleToCover = () => {
-            const workspaceWidth = workspaceDimensions.width;
-            const workspaceHeight = workspaceDimensions.height;
-            const scaleFactor = Math.min(workspaceWidth, workspaceHeight) / 200; // Adjusted for tighter fit
-            updateMediaProperty("scale", scaleFactor);
-        };
-
         const centerMedia = () => {
             updateMediaProperty("x", 50);
             updateMediaProperty("y", 50);
         };
 
-        const isMediaType = ["image", "gif", "video"].includes(media.type);
+        const scaleToCover = () => {
+            const workspaceWidth = workspaceDimensions.width;
+            const workspaceHeight = workspaceDimensions.height;
+            const mediaElement = document.querySelector(`#media-${media.type}-${selectedElement.index}`) as HTMLImageElement | HTMLVideoElement;
+            const scale = mediaElement
+                ? Math.max(workspaceWidth / (mediaElement instanceof HTMLVideoElement ? mediaElement.videoWidth : mediaElement.naturalWidth),
+                    workspaceHeight / (mediaElement instanceof HTMLVideoElement ? mediaElement.videoHeight : mediaElement.naturalHeight))
+                : Math.max(workspaceWidth / 200, workspaceHeight / 200);
+            updateMediaProperty("scale", scale);
+        };
+
+        const deleteMedia = () => {
+            setMediaList(prev => prev.filter((_, i) => i !== selectedElement.index));
+            setKeyMappings(prev => prev.map(mapping =>
+                mapping && mapping.assignedIndex === selectedElement.index ? { ...mapping, assignedIndex: null } :
+                    mapping && mapping.assignedIndex > selectedElement.index ? { ...mapping, assignedIndex: mapping.assignedIndex - 1 } :
+                        mapping
+            ));
+            setSelectedElement(null);
+        };
+
+        const updateMode = (mode: "toggle" | "launchpad" | "oneshot" | "playPause") => {
+            setKeyMappings(prev => {
+                const mappingIndex = prev.findIndex(m => m && m.assignedIndex === selectedElement.index);
+                if (mappingIndex !== -1) {
+                    const newMappings = [...prev];
+                    newMappings[mappingIndex] = { ...newMappings[mappingIndex]!, mode }; // Non-null assertion since we found it
+                    return newMappings;
+                }
+                // If no mapping exists, add a new one
+                return [...prev, {
+                    key: `unmapped-${selectedElement.index}`,
+                    assignedIndex: selectedElement.index,
+                    mappingType: media.type === "audio" ? "audio" : "media",
+                    mode,
+                }];
+            });
+        };
+
+        const currentMapping = keyMappings.find((m): m is KeyMapping => m != null && m.assignedIndex === selectedElement.index);
+        const currentMode = currentMapping?.mode || "toggle"; // Fallback to "toggle" if no mapping
 
         return (
-            <div
-                className="flex flex-col gap-1 p-2 text-white"
-                style={{ backgroundColor: "rgba(0, 0, 0, 0.8)", color: computedColor, minWidth: "220px" }}
-            >
-                <div className="flex items-center justify-between w-full">
-                    <span className="text-sm font-bold truncate" title={media.src || "Text"}>
-                        {media.src ? media.src.split("/").pop()?.substring(0, 10) : "Text"}
-                    </span>
-                    <Button
-                        onClick={() => {
-                            setSelectedElement(null);
-                            setLastInteractionWasDoubleClick(false);
-                        }}
-                        className="p-1 bg-transparent hover:bg-gray-600 transition-colors"
-                    >
-                        <i className="fa-solid fa-times" />
-                    </Button>
+            <div className="flex flex-col gap-1" style={{ backgroundColor: "rgba(0, 0, 0, 0.8)", padding: "4px", minWidth: "220px" }}>
+                {/* Common Controls */}
+                <div className="flex items-center gap-1">
+                    <i className="fa-solid fa-eye-slash text-xs" />
+                    <Slider
+                        min={0}
+                        max={1}
+                        step={0.01}
+                        value={[media.opacity]}
+                        onValueChange={(value) => updateMediaProperty("opacity", value[0])}
+                        className="w-full h-2"
+                        style={{ accentColor: computedColor }}
+                    />
                 </div>
 
-                {isMediaType && (
+                {/* Type-Specific Controls */}
+                {media.type === "image" && (
                     <>
                         <div className="flex items-center gap-1">
-                            <i className="fa-solid fa-eye-slash text-xs" />
+                            <i className="fa-solid fa-expand text-xs" />
                             <Slider
-                                min={0}
-                                max={1}
-                                step={0.01}
-                                value={[media.opacity]}
-                                onValueChange={(value) => updateMediaProperty("opacity", value[0])}
+                                min={0.1}
+                                max={10}
+                                step={0.1}
+                                value={[media.scale]}
+                                onValueChange={(value) => updateMediaProperty("scale", value[0])}
                                 className="w-full h-2"
                                 style={{ accentColor: computedColor }}
                             />
@@ -1174,7 +1513,7 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
                             />
                         </div>
                         <div className="flex items-center gap-1">
-                            <i className="fa-solid fa-arrows-up-down text-xs" />
+                            <i className="fa-solid fa-arrows-up -down text-xs" />
                             <Slider
                                 min={0}
                                 max={100}
@@ -1185,6 +1524,11 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
                                 style={{ accentColor: computedColor }}
                             />
                         </div>
+                    </>
+                )}
+
+                {media.type === "video" && (
+                    <>
                         <div className="flex items-center gap-1">
                             <i className="fa-solid fa-expand text-xs" />
                             <Slider
@@ -1197,49 +1541,129 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
                                 style={{ accentColor: computedColor }}
                             />
                         </div>
-                        <div className="flex gap-1">
-                            <Button
-                                onClick={scaleToCover}
-                                className="p-1 bg-transparent hover:bg-gray-600 transition-colors flex-1"
-                            >
-                                <i className="fa-solid fa-arrows-alt text-xs" /> Cover
-                            </Button>
-                            <Button
-                                onClick={centerMedia}
-                                className="p-1 bg-transparent hover:bg-gray-600 transition-colors flex-1"
-                            >
-                                <i className="fa-solid fa-align-center text-xs" /> Center
-                            </Button>
+                        <div className="flex items-center gap-1">
+                            <i className="fa-solid fa-rotate text-xs" />
+                            <Slider
+                                min={0}
+                                max={360}
+                                step={1}
+                                value={[media.rotation]}
+                                onValueChange={(value) => updateMediaProperty("rotation", value[0])}
+                                className="w-full h-2"
+                                style={{ accentColor: computedColor }}
+                            />
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <i className="fa-solid fa-sliders text-xs" />
+                            <input
+                                type="checkbox"
+                                checked={media.showControls || false}
+                                onChange={(e) => updateMediaProperty("showControls", e.target.checked)}
+                            />
                         </div>
                     </>
                 )}
 
-                {media.type === "text" && (
-                    <div className="flex flex-col gap-1">
-                        <span className="text-xs">Text</span>
-                        <textarea
-                            value={media.textContent || ""}
-                            onChange={(e) => updateMediaProperty("textContent", e.target.value)}
-                            className="bg-gray-800 text-white p-1 rounded h-16 resize-y text-xs"
-                            placeholder="ASCII/text"
-                            style={{ borderColor: computedColor }}
+                {media.type === "audio" && (
+                    <div className="flex items-center gap-1">
+                        <i className="fa-solid fa-volume-high text-xs" />
+                        <Slider
+                            min={0}
+                            max={1}
+                            step={0.01}
+                            value={[media.opacity]} // Proxy for volume
+                            onValueChange={(value) => updateMediaProperty("opacity", value[0])}
+                            className="w-full h-2"
+                            style={{ accentColor: computedColor }}
                         />
                     </div>
                 )}
 
-                <Button
-                    onClick={() => {
-                        setMediaList((prev) => prev.filter((_, i) => i !== selectedElement.index));
-                        setSelectedElement(null);
-                        setLastInteractionWasDoubleClick(false);
-                    }}
-                    className="p-1 bg-red-600 hover:bg-red-700 transition-colors mt-1"
-                >
-                    <i className="fa-solid fa-trash text-xs" />
-                </Button>
+                {media.type === "text" && (
+                    <>
+                        <div className="flex items-center gap-1">
+                            <i className="fa-solid fa-font text-xs" />
+                            <input
+                                type="number"
+                                min={8}
+                                max={72}
+                                step={1}
+                                value={parseInt(media.transform?.match(/font-size:(\d+)/)?.[1] || "16")}
+                                onChange={(e) => updateMediaProperty("transform", `font-size:${e.target.value}px`)}
+                                className="bg-gray-800 text-white p-1 rounded w-12"
+                            />
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <i className="fa-solid fa-palette text-xs" />
+                            <input
+                                type="color"
+                                value={media.textContent?.match(/color:(#[0-9A-Fa-f]{6})/)?.[1] || "#FFFFFF"}
+                                onChange={(e) => updateMediaProperty("textContent", `${media.textContent || ""} color:${e.target.value}`)}
+                                className="w-12 h-6"
+                            />
+                        </div>
+                    </>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex gap-1 mt-1">
+                    <Button
+                        onClick={centerMedia}
+                        className="bg-transparent hover:bg-gray-900 flex-1 p-1"
+                        title="Center"
+                    >
+                        <i className="fa-solid fa-align-center" />
+                    </Button>
+                    <Button
+                        onClick={scaleToCover}
+                        className="bg-transparent hover:bg-gray-900 flex-1 p-1"
+                        title="Scale to Cover"
+                    >
+                        <i className="fa-solid fa-arrows-alt" />
+                    </Button>
+                    <Button
+                        onClick={deleteMedia}
+                        className="bg-transparent hover:bg-red-900 flex-1 p-1"
+                        title="Delete"
+                    >
+                        <i className="fa-solid fa-trash" />
+                    </Button>
+                </div>
+
+                {/* Mode Selection */}
+                <div className="flex gap-1 mt-1">
+                    <Button
+                        onClick={() => updateMode("toggle")}
+                        className={`bg-transparent hover:bg-gray-900 flex-1 p-1 ${currentMode === "toggle" ? "border-2 border-white" : ""}`}
+                        title="Toggle"
+                    >
+                        <i className="fa-solid fa-toggle-on" />
+                    </Button>
+                    <Button
+                        onClick={() => updateMode("launchpad")}
+                        className={`bg-transparent hover:bg-gray-900 flex-1 p-1 ${currentMode === "launchpad" ? "border-2 border-white" : ""}`}
+                        title="Launchpad"
+                    >
+                        <i className="fa-solid fa-rocket" />
+                    </Button>
+                    <Button
+                        onClick={() => updateMode("oneshot")}
+                        className={`bg-transparent hover:bg-gray-900 flex-1 p-1 ${currentMode === "oneshot" ? "border-2 border-white" : ""}`}
+                        title="Oneshot"
+                    >
+                        <i className="fa-solid fa-arrow-right" />
+                    </Button>
+                    <Button
+                        onClick={() => updateMode("playPause")}
+                        className={`bg-transparent hover:bg-gray-900 flex-1 p-1 ${currentMode === "playPause" ? "border-2 border-white" : ""}`}
+                        title="Play/Pause"
+                    >
+                        <i className="fa-solid fa-circle-pause" />
+                    </Button>
+                </div>
             </div>
         );
-    }, [selectedElement, mediaList, setMediaList, workspaceDimensions, computedColor]);
+    }, [selectedElement, mediaList, setMediaList, computedColor, workspaceDimensions, setKeyMappings]);
 
     const webampProps: WebampMilkdropProps = {
         onTrackDrop: (url: string) => {
@@ -1268,7 +1692,6 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
         },
     };
 
-    
     return (
         <div id="fullscreenContainer" className="w-screen h-screen relative">
             <style jsx global>{`
@@ -1338,16 +1761,33 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
                 </div>
 
                 <Workspace
-                    mediaList={mediaListForComponents.map((item, index) => ({
-                        ...item,
-                        id: `media-${item.type}-${index}`,
+                    mediaList={mediaList.map(item => ({
+                        id: `media-${item.type}-${mediaList.indexOf(item)}`,
+                        type: item.type,
+                        src: item.src,
+                        x: item.x,
+                        y: item.y,
+                        scale: item.scale,
+                        rotation: item.rotation,
+                        opacity: item.opacity,
+                        visible: item.visible,
+                        showAt: item.showAt,
+                        hideAt: item.hideAt,
+                        isManuallyControlled: item.isManuallyControlled,
+                        interruptOnPlay: item.interruptOnPlay,
+                        showControls: item.showControls,
+                        mixBlendMode: item.mixBlendMode,
+                        optimizedSrc: item.optimizedSrc,
+                        transform: item.transform,
+                        textContent: item.textContent,
                     }))}
                     customTexts={customTexts}
+                    setCustomTexts={setCustomTexts}
                     isFullscreen={isFullscreen}
                     workspaceDimensions={workspaceDimensions}
                     zoomLevel={zoomLevel}
                     asciiEnabled={asciiEnabled}
-                    onMediaListUpdate={(list: MediaItem[]) => setMediaList(list as ExtendedMediaItem[])} // Adjust type
+                    onMediaListUpdate={setMediaList as React.Dispatch<React.SetStateAction<WorkspaceMediaItem[]>>}
                     onCustomTextsUpdate={setCustomTexts}
                     onSelectElement={onSelectElement}
                     matrixCanvasRef={matrixCanvasRef}
@@ -1371,21 +1811,19 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
                     asciiSaturation={asciiSaturation}
                     allMediaSaturation={allMediaSaturation}
                     layerOrder={layerOrder}
-                    milkdropMixBlendMode="color" setCustomTexts={function (value: React.SetStateAction<CustomTextItem[]>): void {
-                        throw new Error("Function not implemented.");
-                    } }                />
+                    milkdropMixBlendMode="color"
+                    onDropMedia={handleBackgroundMediaDrop} // Use renamed prop
+                    onDragOver={(e) => e.preventDefault()}
+                />
 
                 {audioReady && showWinamp && (
-                    <div
-                        className="absolute inset-0 z-1 pointer-events-auto"
-
-                    >
+                    <div className="absolute inset-0 z-1 pointer-events-auto">
                         <WebampMilkdrop {...webampProps} />
                     </div>
                 )}
 
                 {isPreparingFile && (
-                    <div className="fixed bottom-10 left-1/2 transform -translate-x-1/2 z-[10003] w-1/2 bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700 animate-panel">
+                    <div className="fixed bottom-10 left-1/2 transform -translate-x-1/2 z-[10011] w-1/2 p-6 rounded-lg shadow-lg border border-gray-700 animate-panel">
                         <div className="text-center text-sm text-gray-300 mb-2">
                             {prepStatus === "preparing" && "Preparing File..."}
                             {prepStatus === "done" && "File Ready, Bro!"}
@@ -1510,12 +1948,19 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
                             setEmbeddedMode={setMatrixEnabled}
                             primaryAudioSrc={primaryAudioSrc}
                             primaryAudioRef={audioRef}
-                            audioProgress={audioRef.current ? audioRef.current.currentTime / (audioRef.current.duration || 1) : 0}
+                            audioProgress={
+                                audioRef.current && audioRef.current.duration
+                                    ? audioRef.current.currentTime / audioRef.current.duration
+                                    : 0
+                            }
                             setAudioProgress={(progress: number) => {
-                                if (audioRef.current) audioRef.current.currentTime = progress * (audioRef.current.duration || 1);
+                                if (audioRef.current && audioRef.current.duration) {
+                                    audioRef.current.currentTime = progress * audioRef.current.duration;
+                                }
                             }}
                             selectedElement={selectedElement}
-                            renderOptionsContent={renderOptionsContent} // Added
+                            setSelectedElement={setSelectedElement}
+                            renderOptionsContent={renderOptionsContent}
                             mediaList={mediaList}
                             keyMappings={keyMappings}
                             setKeyMappings={setKeyMappings}
@@ -1545,7 +1990,7 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
                             fps={fps}
                             isRecording={isRecording}
                             toggleRecording={toggleRecording}
-                            audioData={new Uint8Array()}
+                            audioData={audioData}
                             renderAudioControls={renderAudioControls}
                             toggleAudioPanel={() => setShowAudioPanel(prev => !prev)}
                             isFFmpegLoaded={isFFmpegLoaded}
@@ -1562,28 +2007,10 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
                             handleClearAllMedia={handleClearAllMedia}
                             handleClear404Media={handleClear404Media}
                             toggleAudioIntegration={() => setUseAsioProcessing(prev => !prev)}
-                            isAudioIntegrationActive={useAsioProcessing} setSelectedElement={function (value: React.SetStateAction<{ type: "media" | "customText"; index: number; } | null>): void {
-                                throw new Error("Function not implemented.");
-                            } }                        />
+                            isAudioIntegrationActive={useAsioProcessing}
+                        />
                     </SkryrPalette>
-                    <div className="flex flex-row gap-4">
-                        <div className="flex gap-2">
-                            <Button
-                                onClick={handleClearAllMedia}
-                                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
-                            >
-                                Clear All Media
-                            </Button>
-                            <Button
-                                onClick={handleClear404Media}
-                                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
-                            >
-                                Clear 404 Media
-                            </Button>
-                        </div>
-                    </div>
                 </Suspense>
-
                 {audioRef.current && (
                     <WebampMilkdrop {...webampProps} />
                 )}

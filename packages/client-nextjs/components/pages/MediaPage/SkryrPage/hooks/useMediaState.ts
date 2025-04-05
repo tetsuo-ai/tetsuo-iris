@@ -2,8 +2,7 @@ import { useState, useEffect } from "react";
 import AsciiArt from "@/components/ui/asciis";
 
 export interface MediaItem {
-    [x: string]: any;
-    type: "image" | "video" | "audio";
+    type: "image" | "video" | "audio" | "text";
     src: string;
     x: number;
     y: number;
@@ -15,6 +14,11 @@ export interface MediaItem {
     hideAt: number;
     isManuallyControlled?: boolean;
     interruptOnPlay?: boolean;
+    showControls?: boolean;
+    mixBlendMode?: string;
+    optimizedSrc?: string;
+    transform?: string;
+    textContent?: string;
 }
 
 export interface CustomTextItem {
@@ -59,7 +63,6 @@ export const useMediaState = (isFullscreen: boolean) => {
 
     const [keyMappings, setKeyMappings] = useState<KeyMapping[]>(buildDefaultMappings());
 
-    // Initialize default media items with external URLs
     useEffect(() => {
         if (mediaList.length === 0) {
             const defaultMedia: MediaItem[] = [
@@ -121,7 +124,6 @@ export const useMediaState = (isFullscreen: boolean) => {
         }
     }, [mediaList.length]);
 
-    // Initialize default custom text
     useEffect(() => {
         if (customTexts.length === 0) {
             setCustomTexts([
@@ -141,13 +143,11 @@ export const useMediaState = (isFullscreen: boolean) => {
         }
     }, [customTexts.length, isFullscreen]);
 
-    // Update current time every second
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime((prev) => prev + 1), 1000);
         return () => clearInterval(timer);
     }, []);
 
-    // Update media visibility based on current time
     useEffect(() => {
         setMediaList((prev) =>
             prev.map((media) => ({

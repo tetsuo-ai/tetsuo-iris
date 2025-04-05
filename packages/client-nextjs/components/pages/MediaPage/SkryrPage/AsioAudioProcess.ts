@@ -29,31 +29,23 @@ class AsioAudioProcessor {
         return this.audioContext;
     }
 
-    public connectMediaElement(element: HTMLMediaElement) {
-        if (!element || this.mediaSources.has(element)) return;
+    public getAnalyser(): AnalyserNode {
+        return this.analyserNode;
+    }
+
+    public connectMediaElement(element: HTMLMediaElement): boolean {
+        if (!element || this.mediaSources.has(element)) return false;
 
         try {
             const source = this.audioContext.createMediaElementSource(element);
             source.connect(this.equalizerNode);
             this.mediaSources.set(element, source);
-            console.log("Media element connected:", element.src);
+            console.log("Media element connected:", element.src || "No src yet");
+            return true;
         } catch (error) {
-            console.warn(`Media element already connected elsewhere: ${error}`);
-            // Don’t mute; let caller manage
+            console.warn(`Media element connection failed: ${error}`);
+            return false;
         }
-
-        element.addEventListener("loadeddata", () => {
-            if (!this.mediaSources.has(element)) {
-                try {
-                    const newSource = this.audioContext.createMediaElementSource(element);
-                    newSource.connect(this.equalizerNode);
-                    this.mediaSources.set(element, newSource);
-                    console.log("Media element reconnected on load:", element.src);
-                } catch (error) {
-                    console.warn(`Failed to reconnect media element on load: ${error}`);
-                }
-            }
-        }, { once: true });
     }
 
     public isMediaElementConnected(element: HTMLMediaElement): boolean {
@@ -77,6 +69,11 @@ class AsioAudioProcessor {
         this.gainNode.gain.value = Math.max(0, Math.min(1, volume));
     }
 
+    // Added method to get current gain value
+    public getGainValue(): number {
+        return this.gainNode.gain.value;
+    }
+
     public setEqualizer(frequency: number, gain: number) {
         this.equalizerNode.frequency.value = frequency;
         this.equalizerNode.gain.value = gain;
@@ -93,7 +90,7 @@ class AsioAudioProcessor {
             source.disconnect();
             this.mediaSources.delete(element);
         });
-        this.customSources.forEach((source) => source.disconnect());
+        this.customSources.forEach(source => source.disconnect());
         this.customSources = [];
         this.equalizerNode.disconnect();
         this.gainNode.disconnect();
