@@ -283,7 +283,7 @@ const AnimationPage: React.FC<AnimationPageProps> = ({ onMediaSelect, initialMed
             className={`w-full space-y-4 max-w-screen-md mx-auto transition-colors ${isDragActive ? "p-4 border-dashed border-2 border-gray-300" : ""}`}
         >
             <div className="text-center">
-                <h1 className="text-2xl font-bold">Create RGB Animation</h1>
+                <h1 className="text-l font-bold">Create RGB Animation</h1>
             </div>
             {/* Row 3: File Handler */}
             <div className="mt-4" onDrop={(e) => e.preventDefault()} onDragOver={(e) => e.preventDefault()}>

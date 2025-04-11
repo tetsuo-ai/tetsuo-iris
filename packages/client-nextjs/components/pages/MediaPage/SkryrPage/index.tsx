@@ -32,6 +32,7 @@ interface SkryrPageProps {
 
 const defaultMediaItems: ExtendedMediaItem[] = [
     {
+        id: "tetsuo-unit-frame", // Added
         type: "image",
         src: "https://eaccelerate.me/tetsuo/tetsuo-unit-frame.gif",
         x: 10,
@@ -47,6 +48,7 @@ const defaultMediaItems: ExtendedMediaItem[] = [
         mixBlendMode: "normal",
     },
     {
+        id: "skryrblendingdemo", // Added
         type: "image",
         src: "https://eaccelerate.me/tetsuo/skryrblendingdemo.gif",
         x: 20,
@@ -63,6 +65,7 @@ const defaultMediaItems: ExtendedMediaItem[] = [
         showControls: true,
     },
     {
+        id: "neuro-gifs", // Added
         type: "image",
         src: "https://eaccelerate.me/tetsuo/neuro-gifs.gif",
         x: 30,
@@ -1226,7 +1229,6 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
         const onKeyDown = (e: KeyboardEvent) => {
             const keyUpper = e.key.toUpperCase();
             switch (keyUpper) {
-                case "ENTER": togglePlayPause(); break;
                 case "TAB":
                     e.preventDefault();
                     setShowPalette(p => !p);
@@ -1470,7 +1472,7 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
                 <div className="flex flex-col gap-1" style={{ backgroundColor: "rgba(0, 0, 0, 0.8)", padding: "4px", minWidth: "220px" }}>
                     {/* Common Controls */}
                     <div className="flex items-center gap-1">
-                        <i className="fa-solid fa-eye-slash text-xs" />
+                        <i className="fa-solid fa-eye-slash text-xs" title="Opacity" />
                         <Slider
                             min={0}
                             max={1}
@@ -1486,7 +1488,7 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
                     {media.type === "image" && (
                         <>
                             <div className="flex items-center gap-1">
-                                <i className="fa-solid fa-expand text-xs" />
+                                <i className="fa-solid fa-expand text-xs" title="Scale" />
                                 <Slider
                                     min={0.1}
                                     max={10}
@@ -1498,7 +1500,7 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
                                 />
                             </div>
                             <div className="flex items-center gap-1">
-                                <i className="fa-solid fa-rotate text-xs" />
+                                <i className="fa-solid fa-rotate text-xs" title="Rotation" />
                                 <Slider
                                     min={0}
                                     max={360}
@@ -1510,7 +1512,7 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
                                 />
                             </div>
                             <div className="flex items-center gap-1">
-                                <i className="fa-solid fa-arrows-left-right text-xs" />
+                                <i className="fa-solid fa-arrows-left-right text-xs" title="X Position" />
                                 <Slider
                                     min={0}
                                     max={100}
@@ -1522,7 +1524,7 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
                                 />
                             </div>
                             <div className="flex items-center gap-1">
-                                <i className="fa-solid fa-arrows-up-down text-xs" />
+                                <i className="fa-solid fa-arrows-up-down text-xs" title="Y Position" />
                                 <Slider
                                     min={0}
                                     max={100}
@@ -1539,7 +1541,7 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
                     {media.type === "video" && (
                         <>
                             <div className="flex items-center gap-1">
-                                <i className="fa-solid fa-expand text-xs" />
+                                <i className="fa-solid fa-expand text-xs" title="Scale" />
                                 <Slider
                                     min={0.1}
                                     max={10}
@@ -1551,7 +1553,7 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
                                 />
                             </div>
                             <div className="flex items-center gap-1">
-                                <i className="fa-solid fa-rotate text-xs" />
+                                <i className="fa-solid fa-rotate text-xs" title="Rotation" />
                                 <Slider
                                     min={0}
                                     max={360}
@@ -1563,7 +1565,7 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
                                 />
                             </div>
                             <div className="flex items-center gap-1">
-                                <i className="fa-solid fa-sliders text-xs" />
+                                <i className="fa-solid fa-sliders text-xs" title="Controls" />
                                 <input
                                     type="checkbox"
                                     checked={media.showControls || false}
@@ -1575,7 +1577,7 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
 
                     {media.type === "audio" && (
                         <div className="flex items-center gap-1">
-                            <i className="fa-solid fa-volume-high text-xs" />
+                            <i className="fa-solid fa-volume-high text-xs" title="Volume" />
                             <Slider
                                 min={0}
                                 max={1}
@@ -1586,32 +1588,6 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
                                 style={{ accentColor: computedColor }}
                             />
                         </div>
-                    )}
-
-                    {media.type === "text" && (
-                        <>
-                            <div className="flex items-center gap-1">
-                                <i className="fa-solid fa-font text-xs" />
-                                <input
-                                    type="number"
-                                    min={8}
-                                    max={72}
-                                    step={1}
-                                    value={parseInt(media.transform?.match(/font-size:(\d+)/)?.[1] || "16")}
-                                    onChange={(e) => updateMediaProperty("transform", `font-size:${e.target.value}px`)}
-                                    className="bg-gray-800 text-white p-1 rounded w-12"
-                                />
-                            </div>
-                            <div className="flex items-center gap-1">
-                                <i className="fa-solid fa-palette text-xs" />
-                                <input
-                                    type="color"
-                                    value={media.textContent?.match(/color:(#[0-9A-Fa-f]{6})/)?.[1] || "#FFFFFF"}
-                                    onChange={(e) => updateMediaProperty("textContent", `${media.textContent || ""} color:${e.target.value}`)}
-                                    className="w-12 h-6"
-                                />
-                            </div>
-                        </>
                     )}
 
                     {/* Action Buttons */}
@@ -1696,7 +1672,7 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
                 <div className="flex flex-col gap-1" style={{ backgroundColor: "rgba(0, 0, 0, 0.8)", padding: "4px", minWidth: "220px" }}>
                     {/* Scale */}
                     <div className="flex items-center gap-1">
-                        <i className="fa-solid fa-expand text-xs" />
+                        <i className="fa-solid fa-expand text-xs" title="Scale" />
                         <Slider
                             min={0.1}
                             max={10}
@@ -1710,7 +1686,7 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
 
                     {/* X Position */}
                     <div className="flex items-center gap-1">
-                        <i className="fa-solid fa-arrows-left-right text-xs" />
+                        <i className="fa-solid fa-arrows-left-right text-xs" title="X Position" />
                         <Slider
                             min={0}
                             max={100}
@@ -1724,7 +1700,7 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
 
                     {/* Y Position */}
                     <div className="flex items-center gap-1">
-                        <i className="fa-solid fa-arrows-up-down text-xs" />
+                        <i className="fa-solid fa-arrows-up-down text-xs" title="Y Position" />
                         <Slider
                             min={0}
                             max={100}
@@ -1736,10 +1712,51 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
                         />
                     </div>
 
+                    {/* Color */}
+                    <div className="flex items-center gap-1">
+                        <i className="fa-solid fa-palette text-xs" title="Color" />
+                        <input
+                            type="color"
+                            value={text.color}
+                            onChange={(e) => updateTextProperty("color", e.target.value)}
+                            className="w-12 h-6"
+                        />
+                    </div>
+
+                    {/* Font Style */}
+                    <div className="flex items-center gap-1">
+                        <i className="fa-solid fa-font text-xs" title="Font Style" />
+                        <select
+                            value={text.fontStyle || "monospace"}
+                            onChange={(e) => updateTextProperty("fontStyle", e.target.value)}
+                            className="p-1 bg-gray-800 text-white rounded"
+                        >
+                            <option value="monospace">Monospace</option>
+                            <option value="Courier New">Courier New</option>
+                            <option value="Arial">Arial</option>
+                            <option value="Times New Roman">Times New Roman</option>
+                        </select>
+                    </div>
+
+                    {/* Font Weight */}
+                    <div className="flex items-center gap-1">
+                        <i className="fa-solid fa-weight-hanging text-xs" title="Font Weight" />
+                        <select
+                            value={text.fontWeight || "normal"}
+                            onChange={(e) => updateTextProperty("fontWeight", e.target.value)}
+                            className="p-1 bg-gray-800 text-white rounded"
+                        >
+                            <option value="normal">Normal</option>
+                            <option value="bold">Bold</option>
+                            <option value="lighter">Lighter</option>
+                            <option value="bolder">Bolder</option>
+                        </select>
+                    </div>
+
                     {/* Text Content */}
                     <div className="flex flex-col gap-1">
                         <textarea
-                            value={text.text}
+                            value={text.text || ""}
                             onChange={(e) => updateTextProperty("text", e.target.value)}
                             className="bg-gray-800 text-white p-1 rounded w-full h-20 resize-none"
                             placeholder="Edit text..."
@@ -2116,6 +2133,7 @@ const SkryrPage: React.FC<SkryrPageProps> = ({ backgroundEnabled = true }) => {
                             handleClear404Media={handleClear404Media}
                             toggleAudioIntegration={() => setUseAsioProcessing(prev => !prev)}
                             isAudioIntegrationActive={useAsioProcessing}
+                            setCustomTexts={setCustomTexts}
                         />
                     </SkryrPalette>
                 </Suspense>

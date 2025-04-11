@@ -102,7 +102,7 @@ const DallePage: React.FC<DallePageProps> = ({ onMediaSelect }) => {
     return (
         <div className="space-y-6 p-4 max-w-md mx-auto">
             <div className="text-center">
-                <h1 className="text-2xl font-bold">Generate DALL‑E Image</h1>
+                <h1 className="text-l font-bold">Generate DALL‑E Image</h1>
             </div>
             <div>
                 <Textarea

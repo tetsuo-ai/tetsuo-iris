@@ -23,6 +23,8 @@ export interface MediaItem {
     optimizedSrc?: string;
     transform?: string;
     textContent?: string;
+    color?: string;
+    fontStyle?: string;
 }
 
 interface WorkspaceProps {
@@ -102,10 +104,9 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         mediaList,
         customTexts,
         (updatedList) => {
-            // Transform DragMediaItem[] to WorkspaceMediaItem[] by adding id
             const transformedList = updatedList.map((item, index) => ({
                 ...item,
-                id: mediaList.find(m => m.src === item.src)?.id || `media-${item.type}-${index}`, // Preserve existing id or generate new
+                id: mediaList.find(m => m.src === item.src)?.id || `media-${item.type}-${index}`,
             }));
             onMediaListUpdate(transformedList);
         },
@@ -200,7 +201,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                 }}
             >
                 {mediaList.map((media, index) =>
-                    media.visible ? (
+                    media.visible && media.type !== "text" ? (
                         <div
                             key={media.id}
                             style={{
@@ -223,6 +224,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                                 e.stopPropagation();
                                 e.preventDefault();
                                 if (media.visible) {
+                                    console.log("Double-clicked media:", media);
                                     onSelectElement({ type: "media", index }, e);
                                 }
                             }}
@@ -267,10 +269,13 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                                 top: `${text.y}%`,
                                 left: `${text.x}%`,
                                 transform: `translate(-50%, -50%) scale(${text.scale})`,
-                                color: text.color,
+                                color: text.color || "#ffffff",
+                                fontFamily: text.fontStyle || "monospace",
+                                fontWeight: text.fontWeight || "normal",
                                 zIndex: zIndexMap['ascii'] + index,
                                 cursor: "move",
                                 pointerEvents: "auto",
+                                userSelect: "none",
                             }}
                             onMouseDown={(e) => {
                                 if (e.detail === 1) {
@@ -281,11 +286,14 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                                 e.stopPropagation();
                                 e.preventDefault();
                                 if (text.text) {
+                                    console.log("Double-clicked customText:", text);
                                     onSelectElement({ type: "customText", index }, e);
                                 }
                             }}
                         >
-                            <pre style={{ whiteSpace: "pre-wrap" }}>{text.text}</pre>
+                            <pre style={{ whiteSpace: "pre-wrap", background: "transparent", userSelect: "none", fontFamily: text.fontStyle || "monospace", fontWeight: text.fontWeight || "normal" }}>
+                                {text.text}
+                            </pre>
                         </div>
                     ))}
                 </div>

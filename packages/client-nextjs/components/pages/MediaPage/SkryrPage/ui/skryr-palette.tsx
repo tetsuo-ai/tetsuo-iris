@@ -516,7 +516,7 @@ const SkryrPalette: React.FC<SkryrPaletteProps> = ({
         <div style={{ backgroundColor: "rgba(0, 0, 0, 0.8)", padding: "4px" }}>
             <h2 className="text-md font-bold mb-1">Layer & Effects</h2>
             <div className="flex flex-col gap-1">
-                <Button
+                {/* <Button
                     onClick={() => setBackgroundEnabled((prev) => !prev)}
                     className={`w-full h-7 text-xs bg-transparent hover:bg-gray-900 ${backgroundEnabled ? "text-current" : "text-gray-500"}`}
                     title="Toggle Visualizer (F9)"
@@ -536,7 +536,7 @@ const SkryrPalette: React.FC<SkryrPaletteProps> = ({
                     title="Toggle ASCII Mode (F7)"
                 >
                     <i className="fa-solid fa-theater-masks mr-1" /> ASCII
-                </Button>
+                </Button> */}
                 {layerOrder.map((layer) => (
                     <LayerControls
                         key={layer}
@@ -632,8 +632,8 @@ const SkryrPalette: React.FC<SkryrPaletteProps> = ({
                 transform: `translateX(${position ? position.x : 0}px) translateX(-50%)`,
                 top: position ? `${position.y}px` : `${window.innerHeight - 444}px`,
                 width: showPalette ? "fit-content" : "0px",
-                height: "auto",
-                minHeight: "444px",
+                height: "400px",
+                minHeight: "400px",
                 display: "flex",
                 pointerEvents: "auto",
                 boxShadow: "0 2px 8px rgba(0, 0, 0, 0.5)",
@@ -731,7 +731,7 @@ const SkryrPalette: React.FC<SkryrPaletteProps> = ({
                     className={`transition-all duration-300 ease-in-out p-2 bg-black/80 rounded-lg shadow-lg animate-panel ${showMediaOptions ? "panel-open" : "panel-closed"
                         }`}
                     style={{
-                        width: showMediaOptions ? "288px" : "0px",
+                        width: showMediaOptions ? "300px" : "0px",
                         height: "auto",
                         opacity: showMediaOptions ? 1 : 0,
                         visibility: showMediaOptions ? "visible" : "hidden",

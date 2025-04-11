@@ -33,7 +33,7 @@ const GiphyGifKeyboard: React.FC<GiphyGifKeyboardProps> = ({ onGifSelect }) => {
         <div className="w-full p-4 bg-black/50 rounded-lg shadow-lg text-white max-w-screen-md mx-auto max-h-[400px] overflow-y-auto">
             {/* Header */}
             <div className="text-center mb-4">
-                <h2 className="text-xl font-bold">Search GIFs</h2>
+                <h2 className="text-l font-bold">Search GIFs</h2>
             </div>
             <div className="mb-4">
                 <Input

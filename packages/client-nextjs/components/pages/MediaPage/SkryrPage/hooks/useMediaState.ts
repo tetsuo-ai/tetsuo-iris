@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import AsciiArt from "@/components/ui/asciis";
 
 export interface MediaItem {
+    id: string;
     type: "image" | "video" | "audio" | "text";
     src: string;
     x: number;
@@ -32,6 +33,10 @@ export interface CustomTextItem {
     flashIntensity: number;
     color: string;
     isDefault?: boolean;
+    fontStyle?: string;
+    fontWeight?: string; // Added for font weight control
+    opacity?: number;
+    rotation?: number;
 }
 
 export interface KeyMapping {
@@ -67,6 +72,7 @@ export const useMediaState = (isFullscreen: boolean) => {
         if (mediaList.length === 0) {
             const defaultMedia: MediaItem[] = [
                 {
+                    id: "tetsuo-unit-frame",
                     type: "image",
                     src: "https://eaccelerate.me/tetsuo/tetsuo-unit-frame.gif",
                     x: 10,
@@ -82,6 +88,7 @@ export const useMediaState = (isFullscreen: boolean) => {
                     mixBlendMode: "normal",
                 },
                 {
+                    id: "skryrblendingdemo",
                     type: "image",
                     src: "https://eaccelerate.me/tetsuo/skryrblendingdemo.gif",
                     x: 20,
@@ -98,6 +105,7 @@ export const useMediaState = (isFullscreen: boolean) => {
                     showControls: true,
                 },
                 {
+                    id: "neuro-gifs",
                     type: "image",
                     src: "https://eaccelerate.me/tetsuo/neuro-gifs.gif",
                     x: 30,

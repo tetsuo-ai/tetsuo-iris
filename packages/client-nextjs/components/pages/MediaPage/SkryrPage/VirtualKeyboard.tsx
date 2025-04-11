@@ -113,9 +113,11 @@ export const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
                                 if (fileType.startsWith("video/")) newType = "video";
                                 else if (fileType.startsWith("audio/")) newType = "audio";
                                 else if (fileType.startsWith("image/")) newType = "image";
+                                else if (fileType.startsWith("text/")) newType = "text";
 
                                 const src = URL.createObjectURL(file);
                                 const newMedia: ExtendedMediaItem = {
+                                    id: `media-${Date.now()}`, // Add unique ID
                                     type: newType,
                                     src: src,
                                     x: 0,
